@@ -1,16 +1,17 @@
 name: User Service CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-    paths: ['user-service/**']
+    paths: ['backend/user-service/**']
   pull_request:
     branches: [main]
-    paths: ['user-service/**']
+    paths: ['backend/user-service/**']
 
 jobs:
   ci-cd:
-    uses: ./.github/workflows/reusable-service-ci-cd.yml
+    uses: ./.github/workflows/reusable-aws-ci-cd.yml
     with:
       service-name: user-service
       service-port: '5001'

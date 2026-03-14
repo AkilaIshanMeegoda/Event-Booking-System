@@ -1,16 +1,17 @@
 name: Booking Service CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-    paths: ['booking-service/**']
+    paths: ['backend/booking-service/**']
   pull_request:
     branches: [main]
-    paths: ['booking-service/**']
+    paths: ['backend/booking-service/**']
 
 jobs:
   ci-cd:
-    uses: ./.github/workflows/reusable-service-ci-cd.yml
+    uses: ./.github/workflows/reusable-aws-ci-cd.yml
     with:
       service-name: booking-service
       service-port: '5004'
