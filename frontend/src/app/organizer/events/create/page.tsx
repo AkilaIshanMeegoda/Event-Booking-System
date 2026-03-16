@@ -10,7 +10,7 @@ import Link from 'next/link';
 const CATEGORIES = ['music', 'concert', 'sports', 'conference', 'theater', 'workshop', 'festival', 'meetup', 'other'];
 
 export default function CreateEventPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -34,7 +34,7 @@ export default function CreateEventPage() {
     }
     setLoading(true);
     try {
-      const payload = { ...form };
+      const payload: any = { ...form };
       if (!payload.imageUrl) delete payload.imageUrl;
       const data = await eventsApi.create(payload);
       toast.success('Event created successfully!');
@@ -45,6 +45,12 @@ export default function CreateEventPage() {
       setLoading(false);
     }
   };
+
+  if (authLoading) return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
   if (!user || (user.role !== 'organizer' && user.role !== 'admin')) {
     return (

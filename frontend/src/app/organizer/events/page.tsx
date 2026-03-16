@@ -9,12 +9,13 @@ import { formatDate, formatCurrency, getCategoryColor } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function OrganizerEventsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) { router.push('/login'); return; }
     if (user.role !== 'organizer' && user.role !== 'admin') { router.push('/'); return; }
     eventsApi.getAll('limit=100')
@@ -25,7 +26,7 @@ export default function OrganizerEventsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this event?')) return;
@@ -38,6 +39,11 @@ export default function OrganizerEventsPage() {
     }
   };
 
+  if (authLoading) return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
   if (!user || (user.role !== 'organizer' && user.role !== 'admin')) return null;
 
   return (
