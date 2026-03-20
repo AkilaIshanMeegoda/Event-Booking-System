@@ -1,7 +1,7 @@
 {
-  "name": "payment-service",
+  "name": "notification-service",
   "version": "1.0.0",
-  "description": "Payment microservice - Event Ticket Booking Platform",
+  "description": "Notification microservice - Event Ticket Booking Platform",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
