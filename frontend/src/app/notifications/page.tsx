@@ -19,7 +19,7 @@ const typeIcons: Record<string, string> = {
 };
 
 export default function NotificationsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,12 +28,13 @@ export default function NotificationsPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
       return;
     }
     fetchNotifications();
-  }, [user, page]);
+  }, [user, authLoading, page]);
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -82,6 +83,11 @@ export default function NotificationsPage() {
     }
   };
 
+  if (authLoading) return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
   if (!user) return null;
 
   return (
