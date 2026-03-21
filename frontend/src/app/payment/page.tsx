@@ -11,7 +11,7 @@ import Link from 'next/link';
 function PaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const eventId = searchParams.get('eventId') || '';
   const eventTitle = searchParams.get('eventTitle') || '';
@@ -29,9 +29,10 @@ function PaymentForm() {
   const [bookingId, setBookingId] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) router.push('/login');
     if (!eventId) router.push('/events');
-  }, [user, eventId, router]);
+  }, [user, authLoading, eventId, router]);
 
   const formatCard = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 16);
