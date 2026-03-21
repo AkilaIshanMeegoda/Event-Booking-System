@@ -2,6 +2,8 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../src/app');
 
+jest.setTimeout(30000);
+
 beforeAll(async () => {
   const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/reporting-service-test';
   await mongoose.connect(uri);

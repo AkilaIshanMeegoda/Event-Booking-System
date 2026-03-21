@@ -1,0 +1,24 @@
+name: Reporting Service CI/CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['backend/reporting-service/**']
+  pull_request:
+    branches: [main]
+    paths: ['backend/reporting-service/**']
+
+jobs:
+  ci-cd:
+    uses: ./.github/workflows/reusable-aws-ci-cd.yml
+    with:
+      service-name: reporting-service
+      service-port: '5007'
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
