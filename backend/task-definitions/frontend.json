@@ -1,0 +1,48 @@
+{
+  "family": "ctse-ticket-frontend",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::178886967208:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::178886967208:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "frontend",
+      "image": "178886967208.dkr.ecr.ap-south-1.amazonaws.com/ctse-ticket/frontend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "3000" },
+        { "name": "USER_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
+        { "name": "EVENT_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
+        { "name": "PAYMENT_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
+        { "name": "BOOKING_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
+        { "name": "REVIEW_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
+        { "name": "NOTIFICATION_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
+        { "name": "REPORTING_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ctse-ticket/frontend",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 120
+      }
+    }
+  ]
+}

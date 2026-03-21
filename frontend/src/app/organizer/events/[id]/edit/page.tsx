@@ -54,7 +54,7 @@ export default function EditEventPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...form };
+      const payload: any = { ...form };
       if (!payload.imageUrl) delete payload.imageUrl;
       await eventsApi.update(id as string, payload);
       toast.success('Event updated!');

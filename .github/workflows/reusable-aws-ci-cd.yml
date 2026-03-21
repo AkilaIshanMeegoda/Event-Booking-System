@@ -1,0 +1,189 @@
+name: Reusable AWS CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        required: true
+        type: string
+      service-port:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true
+      AWS_ACCOUNT_ID:
+        required: true
+      SONAR_TOKEN:
+        required: true
+      SNYK_TOKEN:
+        required: true
+
+env:
+  ECR_REPOSITORY: ctse-ticket/${{ inputs.service-name }}
+  ECS_CLUSTER: ctse-ticket-cluster
+  ECS_SERVICE: ${{ inputs.service-name }}
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    defaults:
+      run:
+        working-directory: ./backend/${{ inputs.service-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./backend/${{ inputs.service-name }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+        env:
+          MONGO_URI: mongodb://localhost:27017/test_db
+          JWT_SECRET: test-secret-key
+          SERVICE_KEY: test-service-key
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ inputs.service-name }}
+          path: ./backend/${{ inputs.service-name }}/coverage/
+
+  sonarcloud:
+    name: SonarCloud SAST
+    needs: test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-${{ inputs.service-name }}
+          path: ./backend/${{ inputs.service-name }}/coverage/
+
+      - name: Ensure SonarCloud project exists
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          PROJECT_KEY=$(grep 'sonar.projectKey=' ./backend/${{ inputs.service-name }}/sonar-project.properties | cut -d= -f2)
+          curl -s -u "${SONAR_TOKEN}:" \
+            -X POST "https://sonarcloud.io/api/projects/create" \
+            -d "project=${PROJECT_KEY}&name=${{ inputs.service-name }}&organization=ctse-ticket" || true
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          projectBaseDir: ./backend/${{ inputs.service-name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+  security:
+    name: Snyk Security Scan
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/${{ inputs.service-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci
+
+      - name: Snyk Dependency Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=./backend/${{ inputs.service-name }}/package.json
+
+  build-and-push:
+    name: Build & Push to ECR
+    needs: [test, sonarcloud, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      image-tag: ${{ steps.build-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
+            ./backend/${{ inputs.service-name }}
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+          echo "image=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to ECS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && needs.build-and-push.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Render ECS task definition
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: backend/task-definitions/${{ inputs.service-name }}.json
+          container-name: ${{ inputs.service-name }}
+          image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/ctse-ticket/${{ inputs.service-name }}:${{ github.sha }}
+
+      - name: Deploy to ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

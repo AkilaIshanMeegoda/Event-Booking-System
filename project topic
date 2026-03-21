@@ -1,0 +1,214 @@
+Perfect 👍 I’ll compress everything into a **clean, professional, compact version** without unnecessary spacing, while keeping all important details.
+
+---
+
+# Event Ticket Booking Platform (MERN Microservices)
+
+**Roles:** Customer | Admin | (Optional) Event Organizer
+
+---
+
+# 👤 Member 1 – User Service + Booking Service
+
+## 🔹 User Service
+
+**Responsibility:** Authentication, authorization, and user management.
+
+**Roles Managed:** Customer, Admin, Organizer (optional)
+
+### Customer
+
+- Register, Login
+- View & update profile
+- View own bookings
+- Delete account
+
+### Admin
+
+- View all users
+- Change roles
+- Deactivate users
+
+### Organizer (Optional)
+
+- Manage own events
+- View bookings for own events
+
+**Integrations:**
+Booking, Review, and Payment services validate users via JWT.
+
+---
+
+## 🔹 Booking Service
+
+**Responsibility:** Core ticket booking logic.
+
+### Customer
+
+- Book tickets
+- Cancel own booking
+- View booking history & details
+
+### Admin
+
+- View all bookings
+- Cancel any booking
+- Monitor booking activity
+
+**Booking Flow:**
+
+1. Validate JWT (User Service)
+2. Check availability (Event Service)
+3. Create booking (pending)
+4. Call Payment Service
+5. Update booking status
+6. Reporting Service collects data
+
+---
+
+# 👤 Member 2 – Event Service
+
+**Responsibility:** Event management & ticket inventory.
+
+### Customer
+
+- View events
+- Search/filter events
+- View event details
+- See ticket availability
+- View average rating
+
+### Admin
+
+- Create, update, delete events
+- Set ticket count & price
+
+### Organizer (Optional)
+
+- Manage own events only
+
+**Integrations:**
+Booking (availability check), Review (event validation), Reporting (event data).
+
+---
+
+# 👤 Member 3 – Payment + Notification Service
+
+## 🔹 Payment Service
+
+**Responsibility:** Simulated payment processing & transaction management.
+
+### Customer
+
+- Pay for booking
+- View payment history
+- Retry failed payment
+
+### Admin
+
+- View transactions
+- Monitor failures
+- View revenue summary
+
+**Flow:**
+Receives request → validates booking → processes payment → updates booking → triggers notification.
+
+---
+
+## 🔹 Notification
+
+**Responsibility:** System alerts.
+
+### Customer
+
+- Booking confirmation
+- Payment success/failure
+- Cancellation notice
+
+### Admin
+
+- Failed payment alerts
+- High booking alerts
+
+Triggered by Booking & Payment services.
+
+---
+
+# 👤 Member 4 – Feedback & Review + Reporting Service
+
+## 🔹 Review Service
+
+**Responsibility:** Ratings and reviews.
+
+### Customer
+
+- Add/update/delete review
+- Rate events (1–5 stars)
+- View reviews
+
+### Admin
+
+- Remove inappropriate reviews
+- Moderate content
+
+**Integrations:** Validate user (User Service) and event (Event Service).
+
+---
+
+## 🔹 Reporting Service
+
+**Responsibility:** System analytics.
+
+### Customer
+
+- Personal booking summary
+- Personal spending summary
+
+### Admin
+
+- Total revenue
+- Popular events
+- Tickets sold per event
+- Revenue per event
+- Booking trends
+- Active users
+
+**Integrations:** Fetch data from Booking, Payment, and Event services.
+
+---
+
+# 🔐 Role Access Summary
+
+| Feature         | Customer | Admin | Organizer      |
+| --------------- | -------- | ----- | -------------- |
+| Register/Login  | ✅       | ✅    | ✅             |
+| Create Event    | ❌       | ✅    | Own only       |
+| Book Ticket     | ✅       | ❌    | ❌             |
+| Cancel Booking  | Own      | Any   | ❌             |
+| Process Payment | ✅       | ❌    | ❌             |
+| Add Review      | ✅       | ❌    | ❌             |
+| Delete Review   | ❌       | ✅    | ❌             |
+| View Reports    | Limited  | Full  | Event-specific |
+
+---
+
+# 🏗 Final Architecture Distribution
+
+- **Member 1:** User + Booking
+- **Member 2:** Event
+- **Member 3:** Payment + Notification
+- **Member 4:** Review + Reporting
+
+---
+
+This version is:
+
+- Clean
+- Compact
+- Report-ready
+- Easy for viva explanation
+- No unnecessary spacing
+
+---
+
+If you want next, I can give you a **very clean architecture diagram explanation paragraph** for your report (high-scoring academic style).

@@ -1,0 +1,47 @@
+{
+  "family": "ctse-ticket-payment-service",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::178886967208:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::178886967208:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "payment-service",
+      "image": "178886967208.dkr.ecr.ap-south-1.amazonaws.com/ctse-ticket/payment-service:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5003,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "5003" },
+        { "name": "MONGO_URI", "value": "mongodb+srv://ctse:ctse123@cluster0.afkbz0b.mongodb.net/payment_db" },
+        { "name": "JWT_SECRET", "value": "ctse-super-secret-jwt-key-2026" },
+        { "name": "SERVICE_KEY", "value": "ctse-internal-service-key-2026" },
+        { "name": "BOOKING_SERVICE_URL", "value": "http://ctse-ticket-alb-1494626976.ap-south-1.elb.amazonaws.com/api/bookings" },
+        { "name": "NOTIFICATION_SERVICE_URL", "value": "http://ctse-ticket-alb-1494626976.ap-south-1.elb.amazonaws.com/api/notify" },
+        { "name": "ALLOWED_ORIGINS", "value": "http://ctse-ticket-alb-1494626976.ap-south-1.elb.amazonaws.com" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ctse-ticket/payment-service",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://localhost:5003/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
