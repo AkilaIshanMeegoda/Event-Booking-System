@@ -7,19 +7,26 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout, refreshUser, loading: authLoading } = useAuth();
   const router = useRouter();
   const [form, setForm] = useState({ name: '', email: '' });
   const [loading, setLoading] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
       return;
     }
     setForm({ name: user.name, email: user.email });
-  }, [user, router]);
+  }, [user, authLoading, router]);
+
+  if (authLoading) return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
