@@ -1,0 +1,168 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: ticket-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - ticket-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build: ./backend/user-service
+    container_name: user-service
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=mongodb://mongodb:27017/user_db
+      - JWT_SECRET=ctse-super-secret-jwt-key-2026
+      - JWT_EXPIRE=24h
+      - NODE_ENV=development
+      - SERVICE_API_KEY=ctse-internal-service-key-2026
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ticket-network
+    restart: unless-stopped
+
+  booking-service:
+    build: ./backend/booking-service
+    container_name: booking-service
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - MONGO_URI=mongodb://mongodb:27017/booking_db
+      - JWT_SECRET=ctse-super-secret-jwt-key-2026
+      - NODE_ENV=development
+      - SERVICE_API_KEY=ctse-internal-service-key-2026
+      - USER_SERVICE_URL=http://user-service:5001
+      - EVENT_SERVICE_URL=http://event-service:5002
+      - PAYMENT_SERVICE_URL=http://payment-service:5003
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5006
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - ticket-network
+    restart: unless-stopped
+
+  event-service:
+    build: ./backend/event-service
+    container_name: event-service
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - MONGO_URI=mongodb://mongodb:27017/event_db
+      - JWT_SECRET=ctse-super-secret-jwt-key-2026
+      - NODE_ENV=development
+      - SERVICE_API_KEY=ctse-internal-service-key-2026
+      - USER_SERVICE_URL=http://user-service:5001
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ticket-network
+    restart: unless-stopped
+
+  payment-service:
+    build: ./backend/payment-service
+    container_name: payment-service
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - MONGO_URI=mongodb://mongodb:27017/payment_db
+      - JWT_SECRET=ctse-super-secret-jwt-key-2026
+      - NODE_ENV=development
+      - SERVICE_API_KEY=ctse-internal-service-key-2026
+      - BOOKING_SERVICE_URL=http://booking-service:5004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5006
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ticket-network
+    restart: unless-stopped
+
+  notification-service:
+    build: ./backend/notification-service
+    container_name: notification-service
+    ports:
+      - "5006:5006"
+    environment:
+      - PORT=5006
+      - MONGO_URI=mongodb://mongodb:27017/notification_db
+      - JWT_SECRET=ctse-super-secret-jwt-key-2026
+      - NODE_ENV=development
+      - SERVICE_API_KEY=ctse-internal-service-key-2026
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ticket-network
+    restart: unless-stopped
+
+  review-service:
+    build: ./backend/review-service
+    container_name: review-service
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      - MONGO_URI=mongodb://mongodb:27017/review_db
+      - JWT_SECRET=ctse-super-secret-jwt-key-2026
+      - NODE_ENV=development
+      - SERVICE_API_KEY=ctse-internal-service-key-2026
+      - USER_SERVICE_URL=http://user-service:5001
+      - EVENT_SERVICE_URL=http://event-service:5002
+      - BOOKING_SERVICE_URL=http://booking-service:5004
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ticket-network
+    restart: unless-stopped
+
+  reporting-service:
+    build: ./backend/reporting-service
+    container_name: reporting-service
+    ports:
+      - "5007:5007"
+    environment:
+      - PORT=5007
+      - MONGO_URI=mongodb://mongodb:27017/reporting_db
+      - JWT_SECRET=ctse-super-secret-jwt-key-2026
+      - NODE_ENV=development
+      - SERVICE_API_KEY=ctse-internal-service-key-2026
+      - BOOKING_SERVICE_URL=http://booking-service:5004
+      - PAYMENT_SERVICE_URL=http://payment-service:5003
+      - EVENT_SERVICE_URL=http://event-service:5002
+      - USER_SERVICE_URL=http://user-service:5001
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ticket-network
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+
+networks:
+  ticket-network:
+    driver: bridge
