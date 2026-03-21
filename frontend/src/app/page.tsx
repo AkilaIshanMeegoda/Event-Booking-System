@@ -1,5 +1,6 @@
 'use client';
 
+// EventHub Home Page
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { eventsApi } from '@/lib/api';
