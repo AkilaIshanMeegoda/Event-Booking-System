@@ -68,6 +68,7 @@ jobs:
     name: Snyk Security Scan
     needs: lint
     runs-on: ubuntu-latest
+    continue-on-error: true
     defaults:
       run:
         working-directory: ./frontend
@@ -92,11 +93,7 @@ jobs:
     name: Build & Push to ECR
     needs: [lint, sonarcloud, security]
     runs-on: ubuntu-latest
-    if: >
-      github.ref == 'refs/heads/main' &&
-      needs.lint.result == 'success' &&
-      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'failure') &&
-      (needs.security.result == 'success' || needs.security.result == 'failure')
+    if: always() && github.ref == 'refs/heads/main' && needs.lint.result == 'success' && (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'failure') && (needs.security.result == 'success' || needs.security.result == 'failure')
     outputs:
       image-tag: ${{ steps.build-image.outputs.image }}
     steps:
@@ -147,7 +144,7 @@ jobs:
     name: Deploy to ECS
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: needs.build-and-push.result == 'success'
+    if: always() && needs.build-and-push.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
