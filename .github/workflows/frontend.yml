@@ -92,7 +92,11 @@ jobs:
     name: Build & Push to ECR
     needs: [lint, sonarcloud, security]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: >
+      github.ref == 'refs/heads/main' &&
+      needs.lint.result == 'success' &&
+      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'failure') &&
+      (needs.security.result == 'success' || needs.security.result == 'failure')
     outputs:
       image-tag: ${{ steps.build-image.outputs.image }}
     steps:
@@ -143,7 +147,7 @@ jobs:
     name: Deploy to ECS
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && needs.build-and-push.result == 'success'
+    if: needs.build-and-push.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
