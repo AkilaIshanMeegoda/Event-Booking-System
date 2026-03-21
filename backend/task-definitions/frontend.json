@@ -20,13 +20,13 @@
       "environment": [
         { "name": "NODE_ENV", "value": "production" },
         { "name": "PORT", "value": "3000" },
-        { "name": "USER_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
-        { "name": "EVENT_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
-        { "name": "PAYMENT_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
-        { "name": "BOOKING_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
-        { "name": "REVIEW_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
-        { "name": "NOTIFICATION_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" },
-        { "name": "REPORTING_SERVICE_URL", "value": "http://ctse-ticket-alb-918348112.ap-south-1.elb.amazonaws.com" }
+        { "name": "USER_SERVICE_URL", "value": "http://ctse-ticket-alb-1470614406.ap-south-1.elb.amazonaws.com" },
+        { "name": "EVENT_SERVICE_URL", "value": "http://ctse-ticket-alb-1470614406.ap-south-1.elb.amazonaws.com" },
+        { "name": "PAYMENT_SERVICE_URL", "value": "http://ctse-ticket-alb-1470614406.ap-south-1.elb.amazonaws.com" },
+        { "name": "BOOKING_SERVICE_URL", "value": "http://ctse-ticket-alb-1470614406.ap-south-1.elb.amazonaws.com" },
+        { "name": "REVIEW_SERVICE_URL", "value": "http://ctse-ticket-alb-1470614406.ap-south-1.elb.amazonaws.com" },
+        { "name": "NOTIFICATION_SERVICE_URL", "value": "http://ctse-ticket-alb-1470614406.ap-south-1.elb.amazonaws.com" },
+        { "name": "REPORTING_SERVICE_URL", "value": "http://ctse-ticket-alb-1470614406.ap-south-1.elb.amazonaws.com" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

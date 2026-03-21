@@ -81,7 +81,7 @@ aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 70 --conditions "f
 # ---- Step 5: Update frontend task definition with new ALB DNS ----
 Write-Host ""
 Write-Host "[5/6] Updating frontend task definition with new ALB DNS..."
-Set-Location "D:\Projects\CTSE-Event-Test"
+Set-Location "G:\Sliit\Project\Event-Booking-System"
 $content = Get-Content "backend\task-definitions\frontend.json" -Raw
 $content = $content -replace 'http://ctse-ticket-alb-\d+\.ap-south-1\.elb\.amazonaws\.com', "http://$ALB_DNS"
 [System.IO.File]::WriteAllText("$PWD\backend\task-definitions\frontend.json", $content)
