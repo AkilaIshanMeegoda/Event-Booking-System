@@ -24,7 +24,7 @@ app.use(limiter);
 const swaggerSpec = swaggerJsdoc({
   definition: {
     openapi: '3.0.0',
-    info: { title: 'Booking Service API', version: '1.0.0', description: 'Booking management microservice' },
+    info: { title: 'Booking Service API', version: '1.0.0', description: 'Booking managements microservice' },
     servers: [{ url: `http://localhost:${process.env.PORT || 5004}` }],
     components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } } }
   },
