@@ -75,6 +75,22 @@ exports.getUserById = async (req, res, next) => {
   }
 };
 
+// POST /api/users/by-ids — Service-to-Service: batch lookup id -> email
+exports.getUsersByIds = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.json({ success: true, emailMap: {} });
+    }
+    const users = await User.find({ _id: { $in: ids } }).select('_id email');
+    const emailMap = {};
+    users.forEach(u => { emailMap[u._id.toString()] = u.email; });
+    res.json({ success: true, emailMap });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // PUT /api/users/:id/role (Admin)
 exports.changeRole = async (req, res, next) => {
   try {

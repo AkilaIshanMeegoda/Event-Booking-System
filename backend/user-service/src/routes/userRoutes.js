@@ -5,7 +5,7 @@ const roleCheck = require('../middleware/roleCheck');
 const serviceAuth = require('../middleware/serviceAuth');
 const {
   getProfile, updateProfile, deleteProfile,
-  getAllUsers, getUserById, changeRole, deactivateUser
+  getAllUsers, getUserById, getUsersByIds, changeRole, deactivateUser
 } = require('../controllers/userController');
 
 /**
@@ -106,6 +106,7 @@ router.get('/', auth, roleCheck('admin'), getAllUsers);
  *       404:
  *         description: User not found
  */
+router.post('/by-ids', serviceAuth, getUsersByIds);
 router.get('/:id', serviceAuth, auth, getUserById);
 
 /**

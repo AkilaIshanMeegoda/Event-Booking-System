@@ -5,6 +5,7 @@ const { validationResult } = require('express-validator');
 const EVENT_SERVICE = process.env.EVENT_SERVICE_URL || 'http://event-service:5002';
 const PAYMENT_SERVICE = process.env.PAYMENT_SERVICE_URL || 'http://payment-service:5003';
 const NOTIFICATION_SERVICE = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:5006';
+const USER_SERVICE = process.env.USER_SERVICE_URL || 'http://user-service:5001';
 const SERVICE_KEY = process.env.SERVICE_KEY;
 
 const serviceHeaders = { 'x-service-key': SERVICE_KEY };
@@ -224,7 +225,31 @@ exports.getAllBookings = async (req, res, next) => {
       Booking.countDocuments(filter)
     ]);
 
-    res.json({ success: true, bookings, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } });
+    // Enrich bookings that are missing userEmail by batch-looking up from User Service
+    const missingIds = [...new Set(
+      bookings.filter(b => !b.userEmail).map(b => b.userId)
+    )];
+    let emailMap = {};
+    if (missingIds.length > 0) {
+      try {
+        const { data } = await axios.post(
+          `${USER_SERVICE}/api/users/by-ids`,
+          { ids: missingIds },
+          { headers: serviceHeaders }
+        );
+        emailMap = data.emailMap || {};
+      } catch (err) {
+        console.error('Failed to fetch user emails:', err.message);
+      }
+    }
+
+    const enriched = bookings.map(b => {
+      const obj = b.toObject();
+      if (!obj.userEmail) obj.userEmail = emailMap[obj.userId] || obj.userId;
+      return obj;
+    });
+
+    res.json({ success: true, bookings: enriched, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } });
   } catch (error) {
     next(error);
   }
