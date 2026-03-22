@@ -26,6 +26,7 @@ $services = @(
         Extra    = @{
             BOOKING_SERVICE_URL      = "http://localhost:5004"
             NOTIFICATION_SERVICE_URL = "http://localhost:5006"
+            STRIPE_SECRET_KEY        = $env:STRIPE_SECRET_KEY
         }
     },
     @{
