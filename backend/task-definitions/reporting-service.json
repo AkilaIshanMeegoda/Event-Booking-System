@@ -23,13 +23,13 @@
         { "name": "MONGO_URI", "value": "mongodb+srv://ctse:ctse123@cluster0.afkbz0b.mongodb.net/reporting_db" },
         { "name": "JWT_SECRET", "value": "ctse-super-secret-jwt-key-2026" },
         { "name": "SERVICE_KEY", "value": "ctse-internal-service-key-2026" },
-        { "name": "USER_SERVICE_URL", "value": "http://ctse-ticket-alb-1372964525.ap-south-1.elb.amazonaws.com/api/users" },
-        { "name": "EVENT_SERVICE_URL", "value": "http://ctse-ticket-alb-1372964525.ap-south-1.elb.amazonaws.com/api/events" },
-        { "name": "PAYMENT_SERVICE_URL", "value": "http://ctse-ticket-alb-1372964525.ap-south-1.elb.amazonaws.com/api/payments" },
-        { "name": "BOOKING_SERVICE_URL", "value": "http://ctse-ticket-alb-1372964525.ap-south-1.elb.amazonaws.com/api/bookings" },
-        { "name": "REVIEW_SERVICE_URL", "value": "http://ctse-ticket-alb-1372964525.ap-south-1.elb.amazonaws.com/api/reviews" },
-        { "name": "NOTIFICATION_SERVICE_URL", "value": "http://ctse-ticket-alb-1372964525.ap-south-1.elb.amazonaws.com/api/notify" },
-        { "name": "ALLOWED_ORIGINS", "value": "http://ctse-ticket-alb-1372964525.ap-south-1.elb.amazonaws.com" }
+        { "name": "USER_SERVICE_URL", "value": "http://ctse-ticket-alb-1217882162.ap-south-1.elb.amazonaws.com/api/users" },
+        { "name": "EVENT_SERVICE_URL", "value": "http://ctse-ticket-alb-1217882162.ap-south-1.elb.amazonaws.com/api/events" },
+        { "name": "PAYMENT_SERVICE_URL", "value": "http://ctse-ticket-alb-1217882162.ap-south-1.elb.amazonaws.com/api/payments" },
+        { "name": "BOOKING_SERVICE_URL", "value": "http://ctse-ticket-alb-1217882162.ap-south-1.elb.amazonaws.com/api/bookings" },
+        { "name": "REVIEW_SERVICE_URL", "value": "http://ctse-ticket-alb-1217882162.ap-south-1.elb.amazonaws.com/api/reviews" },
+        { "name": "NOTIFICATION_SERVICE_URL", "value": "http://ctse-ticket-alb-1217882162.ap-south-1.elb.amazonaws.com/api/notify" },
+        { "name": "ALLOWED_ORIGINS", "value": "http://ctse-ticket-alb-1217882162.ap-south-1.elb.amazonaws.com" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
