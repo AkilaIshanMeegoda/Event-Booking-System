@@ -52,6 +52,15 @@ export default function EditEventPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validations
+    if (form.title.trim().length < 3) { toast.error('Title must be at least 3 characters'); return; }
+    if (form.description.trim().length < 10) { toast.error('Description must be at least 10 characters'); return; }
+    if (form.venue.trim().length < 2) { toast.error('Venue is required'); return; }
+    if (form.location.trim().length < 2) { toast.error('Location is required'); return; }
+    if (form.totalTickets < 1) { toast.error('Total tickets must be at least 1'); return; }
+    if (form.ticketPrice < 0) { toast.error('Ticket price cannot be negative'); return; }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (!form.date || new Date(form.date) < today) { toast.error('Event date must be today or in the future'); return; }
     setSaving(true);
     try {
       const payload: any = { ...form };

@@ -118,7 +118,7 @@ export default function OrganizerEventsPage() {
                 >
                   View
                 </Link>
-                {user.role === 'admin' && (
+                {(user.role === 'admin' || user.role === 'organizer') && (
                   <button
                     onClick={() => handleDelete(event._id)}
                     className="px-3 py-1.5 text-sm text-danger bg-red-50 rounded-lg hover:bg-red-100 transition"
