@@ -23,5 +23,5 @@ exports.updateEventValidator = [
   body('location').optional().trim(),
   body('totalTickets').optional().isInt({ min: 1 }),
   body('ticketPrice').optional().isFloat({ min: 0 }),
-  body('imageUrl').optional().isURL()
+  body('imageUrl').optional({ checkFalsy: true }).isURL()
 ];
