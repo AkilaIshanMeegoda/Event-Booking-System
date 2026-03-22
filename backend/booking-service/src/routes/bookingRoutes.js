@@ -49,7 +49,7 @@ const bookingController = require('../controllers/bookingController');
  *         application/json:
  *           schema:
  *             type: object
- *             required: [eventId, ticketCount]
+ *             required: [eventId, ticketCount, paymentMethodId]
  *             properties:
  *               eventId:
  *                 type: string
@@ -57,6 +57,9 @@ const bookingController = require('../controllers/bookingController');
  *                 type: integer
  *                 minimum: 1
  *                 maximum: 10
+ *               paymentMethodId:
+ *                 type: string
+ *                 description: Stripe PaymentMethod id created on frontend
  *     responses:
  *       201:
  *         description: Booking confirmed

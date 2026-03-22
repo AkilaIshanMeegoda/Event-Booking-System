@@ -13,6 +13,8 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentMethod: { type: String, default: 'simulated_card' },
   transactionId: { type: String, unique: true },
+  stripePaymentIntentId: { type: String, index: true },
+  stripeRefundId: { type: String },
   eventTitle: { type: String },
   refundedAt: { type: Date },
   failureReason: { type: String }

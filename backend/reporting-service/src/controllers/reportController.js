@@ -24,12 +24,22 @@ async function fetchWithCache(key, url, headers = {}) {
   }
 }
 
+async function fetchWithoutCache(url, headers = {}) {
+  try {
+    const { data } = await axios.get(url, { headers, timeout: 10000 });
+    return data;
+  } catch (err) {
+    console.error(`Failed to fetch ${url}:`, err.message);
+    return null;
+  }
+}
+
 // ─── Dashboard Summary ───
 exports.getDashboardSummary = async (req, res, next) => {
   try {
     const [eventsData, revenueData] = await Promise.all([
       fetchWithCache('events_list', `${EVENT_SERVICE}/api/events?limit=1000`, {}),
-      fetchWithCache('revenue_summary', `${PAYMENT_SERVICE}/api/payments/revenue`, serviceHeaders)
+      fetchWithoutCache(`${PAYMENT_SERVICE}/api/payments/revenue`, serviceHeaders)
     ]);
 
     const totalEvents = eventsData?.pagination?.total || 0;
@@ -96,7 +106,7 @@ exports.getEventPerformanceReport = async (req, res, next) => {
 // ─── Revenue Report ───
 exports.getRevenueReport = async (req, res, next) => {
   try {
-    const revenueData = await fetchWithCache('revenue_report', `${PAYMENT_SERVICE}/api/payments/revenue`, serviceHeaders);
+    const revenueData = await fetchWithoutCache(`${PAYMENT_SERVICE}/api/payments/revenue`, serviceHeaders);
 
     res.json({
       success: true,

@@ -1,29 +1,103 @@
 const Payment = require('../models/Payment');
 
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
+
+const toStripeAmount = (amount) => Math.round(Number(amount) * 100);
+
+const getStripeErrorMessage = (error) => {
+  if (error?.type === 'StripeCardError') return error.message || 'Card was declined.';
+  if (error?.type === 'StripeInvalidRequestError') return error.message || 'Invalid Stripe payment request.';
+  return 'Payment processing failed.';
+};
+
 // ─── Process Payment (Service-to-Service, called by Booking Service) ───
 exports.processPayment = async (req, res, next) => {
   try {
-    const { bookingId, userId, amount, eventTitle } = req.body;
+    const { bookingId, userId, amount, eventTitle, currency = 'usd', paymentMethodId } = req.body;
 
     if (!bookingId || !userId || !amount) {
       return res.status(400).json({ success: false, message: 'bookingId, userId, and amount are required.' });
     }
 
-    const payment = new Payment({ bookingId, userId, amount, eventTitle, status: 'pending' });
+    const normalizedAmount = Number(amount);
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'amount must be a positive number.' });
+    }
 
-    // Simulate payment processing (2-second delay, 90% success rate)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const isSuccess = Math.random() < 0.9;
+    const payment = new Payment({
+      bookingId,
+      userId,
+      amount: normalizedAmount,
+      eventTitle,
+      currency: String(currency).toUpperCase(),
+      status: 'pending',
+      paymentMethod: stripe ? 'stripe' : 'simulated_card'
+    });
 
-    if (isSuccess) {
+    if (!stripe) {
+      // Fallback mode for local environments where Stripe keys are not configured.
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       payment.status = 'completed';
       await payment.save();
-      res.status(201).json({ success: true, message: 'Payment successful', payment });
-    } else {
-      payment.status = 'failed';
-      payment.failureReason = 'Simulated card declined';
+      return res.status(201).json({
+        success: true,
+        message: 'Payment successful (simulation mode: STRIPE_SECRET_KEY not set)',
+        payment
+      });
+    }
+
+    if (!paymentMethodId) {
+      return res.status(400).json({
+        success: false,
+        message: 'paymentMethodId is required for Stripe payments.'
+      });
+    }
+
+    const stripeAmount = toStripeAmount(normalizedAmount);
+    if (!Number.isInteger(stripeAmount) || stripeAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'amount is invalid for Stripe.' });
+    }
+
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: stripeAmount,
+        currency: String(currency).toLowerCase(),
+        payment_method: paymentMethodId,
+        confirm: true,
+        payment_method_types: ['card'],
+        automatic_payment_methods: { enabled: false },
+        metadata: {
+          bookingId,
+          userId,
+          eventTitle: eventTitle || ''
+        }
+      });
+
+      if (paymentIntent.status !== 'succeeded') {
+        payment.status = 'failed';
+        payment.failureReason = `Stripe intent status: ${paymentIntent.status}`;
+        payment.stripePaymentIntentId = paymentIntent.id;
+        payment.transactionId = paymentIntent.id;
+        await payment.save();
+        return res.status(402).json({
+          success: false,
+          message: `Payment failed: ${paymentIntent.status}`,
+          payment
+        });
+      }
+
+      payment.status = 'completed';
+      payment.stripePaymentIntentId = paymentIntent.id;
+      payment.transactionId = paymentIntent.id;
       await payment.save();
-      res.status(402).json({ success: false, message: 'Payment failed: Card declined', payment });
+      res.status(201).json({ success: true, message: 'Payment successful', payment });
+    } catch (stripeError) {
+      payment.status = 'failed';
+      payment.failureReason = getStripeErrorMessage(stripeError);
+      await payment.save();
+      res.status(402).json({ success: false, message: `Payment failed: ${payment.failureReason}`, payment });
     }
   } catch (error) {
     next(error);
@@ -38,6 +112,11 @@ exports.refundPayment = async (req, res, next) => {
 
     if (payment.status !== 'completed') {
       return res.status(400).json({ success: false, message: `Cannot refund a ${payment.status} payment.` });
+    }
+
+    if (stripe && payment.stripePaymentIntentId) {
+      const refund = await stripe.refunds.create({ payment_intent: payment.stripePaymentIntentId });
+      payment.stripeRefundId = refund.id;
     }
 
     payment.status = 'refunded';

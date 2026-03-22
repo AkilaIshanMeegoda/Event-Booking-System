@@ -91,7 +91,7 @@ export const eventsApi = {
 
 // ─── Bookings ───────────────────────────────────────
 export const bookingsApi = {
-  create: (body: { eventId: string; ticketCount: number }) =>
+  create: (body: { eventId: string; ticketCount: number; paymentMethodId: string }) =>
     request<{ success: boolean; booking: any }>('/api/bookings', {
       method: 'POST',
       body: JSON.stringify(body),
