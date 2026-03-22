@@ -7,6 +7,7 @@ import { reviewsApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { FiStar, FiEdit3, FiTrash2, FiArrowRight } from 'react-icons/fi';
 
 export default function MyReviewsPage() {
   const { user } = useAuth();
@@ -72,7 +73,7 @@ export default function MyReviewsPage() {
           disabled={!interactive}
           onClick={() => onChange?.(n)}
           className={`text-lg ${interactive ? 'cursor-pointer hover:scale-110 transition' : 'cursor-default'} ${
-            n <= count ? 'text-yellow-500' : 'text-gray-300'
+            n <= count ? 'text-amber-400' : 'text-gray-300'
           }`}
         >
           ★
@@ -84,111 +85,121 @@ export default function MyReviewsPage() {
   if (!user) return null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">My Reviews</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-500 py-10">
+        <div className="max-w-3xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+            <FiStar className="w-7 h-7" /> My Reviews
+          </h1>
+          <p className="text-blue-100 mt-1">Manage your event reviews and feedback</p>
+        </div>
+      </div>
 
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="animate-pulse bg-card border border-border rounded-xl p-5">
-              <div className="h-4 bg-secondary rounded w-1/3 mb-3" />
-              <div className="h-3 bg-secondary rounded w-full mb-2" />
-              <div className="h-3 bg-secondary rounded w-2/3" />
-            </div>
-          ))}
-        </div>
-      ) : reviews.length === 0 ? (
-        <div className="text-center py-16 bg-card border border-border rounded-xl">
-          <p className="text-4xl mb-4">⭐</p>
-          <h3 className="text-lg font-semibold mb-2">No reviews yet</h3>
-          <p className="text-muted text-sm mb-4">You haven&apos;t written any reviews. Book an event and share your experience!</p>
-          <Link href="/events" className="text-primary hover:underline text-sm font-medium">
-            Browse Events →
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {reviews.map(review => (
-            <div key={review._id} className="bg-card border border-border rounded-xl p-5">
-              {editingId === review._id ? (
-                /* Edit mode */
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Rating</label>
-                    {renderStars(editForm.rating, true, n => setEditForm({ ...editForm, rating: n }))}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={editForm.title}
-                      onChange={e => setEditForm({ ...editForm, title: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Comment</label>
-                    <textarea
-                      rows={3}
-                      value={editForm.comment}
-                      onChange={e => setEditForm({ ...editForm, comment: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm resize-none"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleSaveEdit(review._id)}
-                      className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="px-4 py-2 bg-secondary text-sm rounded-lg hover:bg-primary/10 transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Display mode */
-                <>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/events/${review.eventId}`}
-                        className="text-xs text-primary hover:underline font-medium"
+      <div className="max-w-3xl mx-auto px-4 -mt-4">
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="animate-pulse bg-white rounded-2xl p-5 shadow-sm">
+                <div className="h-4 bg-gray-200 rounded w-1/3 mb-3" />
+                <div className="h-3 bg-gray-200 rounded w-full mb-2" />
+                <div className="h-3 bg-gray-200 rounded w-2/3" />
+              </div>
+            ))}
+          </div>
+        ) : reviews.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
+            <div className="text-5xl mb-4">⭐</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No reviews yet</h3>
+            <p className="text-gray-500 mb-6">Book an event and share your experience!</p>
+            <Link href="/events" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">
+              Browse Events <FiArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map(review => (
+              <div key={review._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
+                {editingId === review._id ? (
+                  /* Edit mode */
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Rating</label>
+                      {renderStars(editForm.rating, true, n => setEditForm({ ...editForm, rating: n }))}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Title</label>
+                      <input
+                        type="text"
+                        value={editForm.title}
+                        onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white text-sm transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Comment</label>
+                      <textarea
+                        rows={3}
+                        value={editForm.comment}
+                        onChange={e => setEditForm({ ...editForm, comment: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white text-sm resize-none transition"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSaveEdit(review._id)}
+                        className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition"
                       >
-                        {review.eventTitle || 'View Event'}
-                      </Link>
-                      <h3 className="font-semibold mt-1">{review.title}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        {renderStars(review.rating)}
-                        <span className="text-xs text-muted">{formatDate(review.createdAt)}</span>
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="px-5 py-2 bg-gray-50 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-100 transition"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Display mode */
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          href={`/events/${review.eventId}`}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                        >
+                          {review.eventTitle || 'View Event'}
+                        </Link>
+                        <h3 className="font-bold text-gray-900 mt-1">{review.title}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          {renderStars(review.rating)}
+                          <span className="text-xs text-gray-400">{formatDate(review.createdAt)}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => handleEdit(review)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        >
+                          <FiEdit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(review._id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <FiTrash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleEdit(review)}
-                        className="px-3 py-1.5 text-xs bg-secondary rounded-lg hover:bg-primary/10 transition"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(review._id)}
-                        className="px-3 py-1.5 text-xs text-danger bg-red-50 rounded-lg hover:bg-red-100 transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted mt-2">{review.comment}</p>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+                    <p className="text-sm text-gray-500 mt-3">{review.comment}</p>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

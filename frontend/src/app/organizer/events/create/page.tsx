@@ -189,14 +189,32 @@ export default function CreateEventPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Image URL (optional)</label>
+          <label className="block text-sm font-medium mb-1">Event Image URL (optional)</label>
           <input
             type="url"
             value={form.imageUrl}
             onChange={e => setForm({ ...form, imageUrl: e.target.value })}
             className="w-full px-4 py-2.5 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-            placeholder="https://example.com/image.jpg"
+            placeholder="https://example.com/event-banner.jpg"
           />
+          {form.imageUrl && (
+            <div className="mt-3 relative rounded-xl overflow-hidden border border-border">
+              <img
+                src={form.imageUrl}
+                alt="Event preview"
+                className="w-full h-48 object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, imageUrl: '' })}
+                className="absolute top-2 right-2 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <p className="text-xs text-muted mt-1">Add an image URL to make your event stand out. Recommended size: 800x500px</p>
         </div>
 
         <button

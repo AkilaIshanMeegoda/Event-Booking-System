@@ -26,7 +26,7 @@ export function formatCurrency(amount: number) {
 export function getCategoryColor(category: string) {
   const colors: Record<string, string> = {
     music: 'bg-purple-100 text-purple-700',
-    concert: 'bg-indigo-100 text-indigo-700',
+    concert: 'bg-blue-100 text-blue-700',
     sports: 'bg-green-100 text-green-700',
     conference: 'bg-blue-100 text-blue-700',
     theater: 'bg-red-100 text-red-700',
@@ -52,4 +52,27 @@ export function getStatusColor(status: string) {
 
 export function getPaymentStatusColor(status: string) {
   return getStatusColor(status);
+}
+
+export function getCategoryGradient(category: string) {
+  const gradients: Record<string, string> = {
+    music: 'from-purple-500 to-pink-500',
+    concert: 'from-blue-500 to-purple-500',
+    sports: 'from-green-500 to-emerald-500',
+    conference: 'from-blue-500 to-cyan-500',
+    theater: 'from-red-500 to-orange-500',
+    workshop: 'from-amber-500 to-yellow-500',
+    festival: 'from-pink-500 to-rose-500',
+    meetup: 'from-teal-500 to-cyan-500',
+    other: 'from-gray-500 to-slate-500',
+  };
+  return gradients[category] || gradients.other;
+}
+
+export function getCategoryEmoji(category: string) {
+  const emojis: Record<string, string> = {
+    music: '🎵', concert: '🎤', sports: '⚽', conference: '💼',
+    theater: '🎭', workshop: '🔧', festival: '🎪', meetup: '🤝', other: '🎫',
+  };
+  return emojis[category] || emojis.other;
 }

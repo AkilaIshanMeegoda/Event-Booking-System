@@ -10,6 +10,9 @@ const reportingServiceUrl = process.env.REPORTING_SERVICE_URL || 'http://localho
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  images: {
+    unoptimized: true,
+  },
   async rewrites() {
     return [
       { source: '/api/auth/:path*', destination: `${userServiceUrl}/api/auth/:path*` },
