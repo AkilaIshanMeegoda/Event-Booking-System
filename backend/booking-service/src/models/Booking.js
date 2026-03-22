@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
+  userEmail: { type: String, default: '' },
   eventId: { type: String, required: true, index: true },
   eventTitle: { type: String, required: true },
   ticketCount: { type: Number, required: true, min: 1 },

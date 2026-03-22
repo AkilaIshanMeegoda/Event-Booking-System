@@ -194,7 +194,7 @@ router.put('/:id', auth, roleCheck('admin', 'organizer'), updateEventValidator, 
  *       200:
  *         description: Event deleted (soft)
  */
-router.delete('/:id', auth, roleCheck('admin'), eventController.deleteEvent);
+router.delete('/:id', auth, roleCheck('admin', 'organizer'), eventController.deleteEvent);
 
 /**
  * @swagger
