@@ -144,10 +144,10 @@ exports.deleteReview = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Access denied.' });
     }
 
-    review.isActive = false;
-    await review.save();
+    const eventId = review.eventId;
+    await Review.findByIdAndDelete(req.params.id);
 
-    await updateEventRating(review.eventId);
+    await updateEventRating(eventId);
 
     res.json({ success: true, message: 'Review deleted' });
   } catch (error) {

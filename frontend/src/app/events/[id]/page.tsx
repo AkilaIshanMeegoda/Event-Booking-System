@@ -55,6 +55,21 @@ export default function EventDetailPage() {
     router.push(`/payment?${params.toString()}`);
   };
 
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm('Remove this review?')) return;
+    try {
+      await reviewsApi.delete(reviewId);
+      toast.success('Review removed');
+      const data = await reviewsApi.getByEvent(event._id, 'limit=10&sortBy=newest');
+      setReviews(data.reviews);
+      setRatingDist(data.ratingDistribution || []);
+      const evData = await eventsApi.getById(event._id);
+      setEvent(evData.event);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove review');
+    }
+  };
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -253,8 +268,18 @@ export default function EventDetailPage() {
                           <p className="text-xs text-muted">{formatDate(review.createdAt)}</p>
                         </div>
                       </div>
-                      <div className="text-warning text-sm">
-                        {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                      <div className="flex items-center gap-2">
+                        <div className="text-warning text-sm">
+                          {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                        </div>
+                        {user?.role === 'admin' && (
+                          <button
+                            onClick={() => handleDeleteReview(review._id)}
+                            className="text-xs text-danger hover:underline"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     </div>
                     <h4 className="font-medium text-sm mb-1">{review.title}</h4>
