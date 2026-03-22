@@ -133,6 +133,7 @@ jobs:
             --build-arg REVIEW_SERVICE_URL=$API_GW_URL \
             --build-arg NOTIFICATION_SERVICE_URL=$API_GW_URL \
             --build-arg REPORTING_SERVICE_URL=$API_GW_URL \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51TDgVrFvYwhhWZpYfeUDNTY9n2uANZjiLSEMUJSb8rJ5DArRGzDoObtxfwpPtl4Q9aN52yURWKArZ5LCBWr89A2T00PKiJTiTu \
             -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
             -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
             ./frontend

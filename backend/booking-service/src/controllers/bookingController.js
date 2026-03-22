@@ -18,7 +18,7 @@ exports.createBooking = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
-    const { eventId, ticketCount } = req.body;
+    const { eventId, ticketCount, paymentMethodId } = req.body;
     const userId = req.user.id;
 
     // Step 1 — Check event availability via Event Service
@@ -53,7 +53,9 @@ exports.createBooking = async (req, res, next) => {
         bookingId: booking._id.toString(),
         userId,
         amount: totalAmount,
-        eventTitle: eventData.title
+        eventTitle: eventData.title,
+        paymentMethodId,
+        currency: 'usd'
       }, { headers: serviceHeaders });
       paymentResult = data;
     } catch (payError) {
@@ -140,6 +142,9 @@ exports.cancelBooking = async (req, res, next) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
 
+    let refundStatus = 'not_applicable';
+    let refundMessage = 'No refund was needed for this cancellation.';
+
     if (req.user.role !== 'admin' && booking.userId !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Access denied.' });
     }
@@ -159,9 +164,15 @@ exports.cancelBooking = async (req, res, next) => {
       try {
         await axios.put(`${PAYMENT_SERVICE}/api/payments/${booking.paymentId}/refund`, {}, { headers: serviceHeaders });
         booking.paymentStatus = 'refunded';
+        refundStatus = 'success';
+        refundMessage = `Your refund for "${booking.eventTitle}" has been processed successfully.`;
       } catch (err) {
         console.error('Refund failed:', err.message);
+        refundStatus = 'failed';
+        refundMessage = `We cancelled your booking for "${booking.eventTitle}", but refund processing failed. Please contact support.`;
       }
+    } else {
+      refundMessage = `Booking for "${booking.eventTitle}" was cancelled. No completed payment was found to refund.`;
     }
 
     booking.status = 'cancelled';
@@ -176,6 +187,19 @@ exports.cancelBooking = async (req, res, next) => {
       title: 'Booking Cancelled',
       message: `Your booking for "${booking.eventTitle}" has been cancelled.`,
       metadata: { bookingId: booking._id.toString(), eventId: booking.eventId }
+    }, { headers: serviceHeaders }).catch(() => {});
+
+    // Refund outcome notification (fire-and-forget)
+    axios.post(`${NOTIFICATION_SERVICE}/api/notifications`, {
+      userId: booking.userId,
+      type: refundStatus === 'failed' ? 'payment_failed' : 'payment_refund',
+      title: refundStatus === 'success' ? 'Refund Successful' : refundStatus === 'failed' ? 'Refund Failed' : 'Refund Update',
+      message: refundMessage,
+      metadata: {
+        bookingId: booking._id.toString(),
+        eventId: booking.eventId,
+        paymentId: booking.paymentId || undefined
+      }
     }, { headers: serviceHeaders }).catch(() => {});
 
     res.json({ success: true, message: 'Booking cancelled', booking });
