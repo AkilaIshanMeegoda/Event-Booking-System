@@ -54,6 +54,8 @@ const paymentController = require('../controllers/paymentController');
  *               userId: { type: string }
  *               amount: { type: number }
  *               eventTitle: { type: string }
+ *               currency: { type: string, example: usd }
+ *               paymentMethodId: { type: string, description: Stripe PaymentMethod id from frontend }
  *     responses:
  *       201:
  *         description: Payment successful
