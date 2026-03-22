@@ -78,19 +78,121 @@ aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 50 --conditions "f
 aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 60 --conditions "file://$env:TEMP/r60.json" --actions "Type=forward,TargetGroupArn=$TG_NOTIFICATION" --output text >$null ; Write-Host "  -> rule 60: /api/notifications -> notification-service"
 aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 70 --conditions "file://$env:TEMP/r70.json" --actions "Type=forward,TargetGroupArn=$TG_REPORTING"    --output text >$null ; Write-Host "  -> rule 70: /api/reports -> reporting-service"
 
-# ---- Step 5: Update frontend task definition with new ALB DNS ----
+# ---- Step 5: Create / Update API Gateway REST API ----
 Write-Host ""
-Write-Host "[5/6] Updating frontend task definition with new ALB DNS..."
+Write-Host "[5/8] Setting up API Gateway REST API..."
+
+# Check if the API already exists
+$API_ID = (aws apigateway get-rest-apis --query "items[?name=='ctse-ticket-api'].id" --output text 2>$null)
+if (-not $API_ID -or $API_ID -eq "None") {
+    $API_ID = (aws apigateway create-rest-api `
+        --name ctse-ticket-api `
+        --description "CTSE Event Ticket Platform API Gateway" `
+        --endpoint-configuration "types=REGIONAL" `
+        --query 'id' --output text)
+    Write-Host "  Created API Gateway: $API_ID"
+} else {
+    Write-Host "  API Gateway already exists: $API_ID"
+}
+
+# Get the root resource id (/)
+$ROOT_ID = (aws apigateway get-resources --rest-api-id $API_ID --query "items[?path=='/'].id" --output text)
+Write-Host "  Root resource: $ROOT_ID"
+
+# Create /{proxy+} catch-all resource
+$PROXY_EXISTS = (aws apigateway get-resources --rest-api-id $API_ID --query "items[?pathPart=='{proxy+}'].id" --output text 2>$null)
+if (-not $PROXY_EXISTS -or $PROXY_EXISTS -eq "None") {
+    $PROXY_ID = (aws apigateway create-resource `
+        --rest-api-id $API_ID `
+        --parent-id $ROOT_ID `
+        --path-part '{proxy+}' `
+        --query 'id' --output text)
+    Write-Host "  Created {proxy+} resource: $PROXY_ID"
+} else {
+    $PROXY_ID = $PROXY_EXISTS
+    Write-Host "  {proxy+} resource exists: $PROXY_ID"
+}
+
+# Create ANY method on /{proxy+} with HTTP_PROXY integration to ALB
+aws apigateway put-method `
+    --rest-api-id $API_ID `
+    --resource-id $PROXY_ID `
+    --http-method ANY `
+    --authorization-type NONE `
+    --request-parameters "method.request.path.proxy=true" `
+    --output text >$null 2>$null
+Write-Host "  -> ANY method on /{proxy+}"
+
+aws apigateway put-integration `
+    --rest-api-id $API_ID `
+    --resource-id $PROXY_ID `
+    --http-method ANY `
+    --type HTTP_PROXY `
+    --integration-http-method ANY `
+    --uri "http://$ALB_DNS/{proxy}" `
+    --request-parameters "integration.request.path.proxy=method.request.path.proxy" `
+    --output text >$null
+Write-Host "  -> HTTP_PROXY integration -> http://$ALB_DNS/{proxy}"
+
+# Also create ANY method on root (/) for frontend
+aws apigateway put-method `
+    --rest-api-id $API_ID `
+    --resource-id $ROOT_ID `
+    --http-method ANY `
+    --authorization-type NONE `
+    --output text >$null 2>$null
+
+aws apigateway put-integration `
+    --rest-api-id $API_ID `
+    --resource-id $ROOT_ID `
+    --http-method ANY `
+    --type HTTP_PROXY `
+    --integration-http-method ANY `
+    --uri "http://$ALB_DNS/" `
+    --output text >$null
+Write-Host "  -> Root (/) -> http://$ALB_DNS/"
+
+# Deploy to 'prod' stage
+aws apigateway create-deployment `
+    --rest-api-id $API_ID `
+    --stage-name prod `
+    --description "Auto-deployed by start-aws.ps1" `
+    --output text >$null
+Write-Host "  -> Deployed to 'prod' stage"
+
+$API_GW_URL = "https://$API_ID.execute-api.ap-south-1.amazonaws.com/prod"
+Write-Host "  API Gateway URL: $API_GW_URL" -ForegroundColor Yellow
+
+# ---- Step 6: Update frontend task definition with API Gateway URL ----
+Write-Host ""
+Write-Host "[6/8] Updating frontend task definition with API Gateway URL..."
 Set-Location "G:\Sliit\Project\Event-Booking-System"
 $content = Get-Content "backend\task-definitions\frontend.json" -Raw
-$content = $content -replace 'http://ctse-ticket-alb-\d+\.ap-south-1\.elb\.amazonaws\.com', "http://$ALB_DNS"
+# Replace any previous ALB or API GW URL with the new API Gateway URL
+$content = $content -replace 'http://ctse-ticket-alb-\d+\.ap-south-1\.elb\.amazonaws\.com', $API_GW_URL
+$content = $content -replace 'https://[a-z0-9]+\.execute-api\.ap-south-1\.amazonaws\.com/prod', $API_GW_URL
 [System.IO.File]::WriteAllText("$PWD\backend\task-definitions\frontend.json", $content)
 $taskDefArn = (aws ecs register-task-definition --region ap-south-1 --cli-input-json "file://backend/task-definitions/frontend.json" --query "taskDefinition.taskDefinitionArn" --output text)
 Write-Host "  Registered: $taskDefArn"
 
-# ---- Step 6: Create ECS Services ----
+# ---- Step 7: Update backend task definitions with ALB DNS for inter-service calls ----
 Write-Host ""
-Write-Host "[6/6] Creating ECS services..."
+Write-Host "[7/8] Updating backend task definitions with ALB DNS for inter-service calls..."
+$backendTasks = @("user-service","event-service","payment-service","booking-service","review-service","notification-service","reporting-service")
+foreach ($svc in $backendTasks) {
+    $taskFile = "backend\task-definitions\$svc.json"
+    if (Test-Path $taskFile) {
+        $taskContent = Get-Content $taskFile -Raw
+        $taskContent = $taskContent -replace 'http://ctse-ticket-alb-\d+\.ap-south-1\.elb\.amazonaws\.com', "http://$ALB_DNS"
+        [System.IO.File]::WriteAllText("$PWD\$taskFile", $taskContent)
+        $tdArn = (aws ecs register-task-definition --region ap-south-1 --cli-input-json "file://$taskFile" --query "taskDefinition.taskDefinitionArn" --output text)
+        Write-Host "  -> $svc registered: $tdArn"
+    }
+}
+
+# ---- Step 8: Create ECS Services ----
+Write-Host ""
+Write-Host "[8/8] Creating ECS services..."
 
 # Safety: wait for any old service instances to fully drain (relevant if stop+start run back-to-back)
 Write-Host "  Checking for services still draining from a previous stop..."
@@ -134,7 +236,8 @@ foreach ($s in $services) {
 # ---- Final Status Check ----
 Write-Host ""
 Write-Host "=== ALL STARTED ===" -ForegroundColor Green
-Write-Host "Website URL: http://$ALB_DNS" -ForegroundColor Yellow
+Write-Host "API Gateway URL: $API_GW_URL" -ForegroundColor Yellow
+Write-Host "ALB URL (internal): http://$ALB_DNS" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Waiting 90s then checking service health..."
 Start-Sleep 90

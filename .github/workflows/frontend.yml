@@ -110,29 +110,29 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Get current ALB DNS
-        id: alb-dns
+      - name: Get API Gateway URL
+        id: api-gw
         run: |
-          ALB_DNS=$(aws elbv2 describe-load-balancers --names ctse-ticket-alb \
-            --query 'LoadBalancers[0].DNSName' --output text)
-          echo "dns=$ALB_DNS" >> $GITHUB_OUTPUT
-          echo "ALB DNS: $ALB_DNS"
+          API_ID=$(aws apigateway get-rest-apis --query "items[?name=='ctse-ticket-api'].id" --output text)
+          API_GW_URL="https://${API_ID}.execute-api.${{ secrets.AWS_REGION }}.amazonaws.com/prod"
+          echo "url=$API_GW_URL" >> $GITHUB_OUTPUT
+          echo "API Gateway URL: $API_GW_URL"
 
       - name: Build and push Docker image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
-          ALB_URL: http://${{ steps.alb-dns.outputs.dns }}
+          API_GW_URL: ${{ steps.api-gw.outputs.url }}
         run: |
           docker build \
-            --build-arg USER_SERVICE_URL=$ALB_URL \
-            --build-arg EVENT_SERVICE_URL=$ALB_URL \
-            --build-arg PAYMENT_SERVICE_URL=$ALB_URL \
-            --build-arg BOOKING_SERVICE_URL=$ALB_URL \
-            --build-arg REVIEW_SERVICE_URL=$ALB_URL \
-            --build-arg NOTIFICATION_SERVICE_URL=$ALB_URL \
-            --build-arg REPORTING_SERVICE_URL=$ALB_URL \
+            --build-arg USER_SERVICE_URL=$API_GW_URL \
+            --build-arg EVENT_SERVICE_URL=$API_GW_URL \
+            --build-arg PAYMENT_SERVICE_URL=$API_GW_URL \
+            --build-arg BOOKING_SERVICE_URL=$API_GW_URL \
+            --build-arg REVIEW_SERVICE_URL=$API_GW_URL \
+            --build-arg NOTIFICATION_SERVICE_URL=$API_GW_URL \
+            --build-arg REPORTING_SERVICE_URL=$API_GW_URL \
             -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
             -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
             ./frontend

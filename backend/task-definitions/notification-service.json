@@ -23,7 +23,7 @@
         { "name": "MONGO_URI", "value": "mongodb+srv://ctse:ctse123@cluster0.afkbz0b.mongodb.net/notification_db" },
         { "name": "JWT_SECRET", "value": "ctse-super-secret-jwt-key-2026" },
         { "name": "SERVICE_KEY", "value": "ctse-internal-service-key-2026" },
-        { "name": "ALLOWED_ORIGINS", "value": "http://ctse-ticket-alb-1494626976.ap-south-1.elb.amazonaws.com" }
+        { "name": "ALLOWED_ORIGINS", "value": "http://ctse-ticket-alb-273846109.ap-south-1.elb.amazonaws.com" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
