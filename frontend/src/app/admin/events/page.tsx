@@ -16,6 +16,9 @@ export default function AdminEventsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState('');
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,6 +52,42 @@ export default function AdminEventsPage() {
       fetchEvents();
     } catch (err: any) {
       toast.error(err.message || 'Failed');
+    }
+  };
+
+  const openEdit = (event: any) => {
+    setEditingEvent(event);
+    setEditForm({
+      title: event.title || '',
+      category: event.category || '',
+      date: event.date ? event.date.split('T')[0] : '',
+      time: event.time || '',
+      venue: event.venue || '',
+      location: event.location || '',
+      ticketPrice: event.ticketPrice ?? '',
+      totalTickets: event.totalTickets ?? '',
+      description: event.description || '',
+      imageUrl: event.imageUrl || '',
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+    setSavingEdit(true);
+    try {
+      await eventsApi.update(editingEvent._id, {
+        ...editForm,
+        ticketPrice: Number(editForm.ticketPrice),
+        totalTickets: Number(editForm.totalTickets),
+      });
+      toast.success('Event updated');
+      setEditingEvent(null);
+      fetchEvents();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -130,10 +169,16 @@ export default function AdminEventsPage() {
                     Report
                   </Link>
                   {event.isActive && (
-                    <button onClick={() => handleDelete(event._id)}
-                      className="px-3 py-1.5 text-sm text-danger bg-red-50 rounded-lg hover:bg-red-100 transition">
-                      Delete
-                    </button>
+                    <>
+                      <button onClick={() => openEdit(event)}
+                        className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition">
+                        Edit
+                      </button>
+                      <button onClick={() => handleDelete(event._id)}
+                        className="px-3 py-1.5 text-sm text-danger bg-red-50 rounded-lg hover:bg-red-100 transition">
+                        Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -149,6 +194,99 @@ export default function AdminEventsPage() {
                 className="px-4 py-2 rounded-lg border border-border bg-white hover:bg-secondary disabled:opacity-50 text-sm">Next</button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Edit Event Modal */}
+      {editingEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-5 border-b border-border">
+              <h2 className="text-lg font-semibold">Edit Event</h2>
+              <button onClick={() => setEditingEvent(null)} className="text-muted hover:text-foreground text-2xl leading-none">&times;</button>
+            </div>
+            <form onSubmit={handleUpdate} className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input type="text" required value={editForm.title}
+                  onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select required value={editForm.category}
+                  onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm">
+                  {['music', 'concert', 'sports', 'conference', 'theater', 'workshop', 'festival', 'meetup', 'other'].map(c => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <input type="date" required value={editForm.date}
+                    onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Time</label>
+                  <input type="text" required value={editForm.time}
+                    onChange={e => setEditForm({ ...editForm, time: e.target.value })}
+                    placeholder="e.g. 7:00 PM"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Venue</label>
+                <input type="text" required value={editForm.venue}
+                  onChange={e => setEditForm({ ...editForm, venue: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Location</label>
+                <input type="text" required value={editForm.location}
+                  onChange={e => setEditForm({ ...editForm, location: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Ticket Price ($)</label>
+                  <input type="number" required min="0" step="0.01" value={editForm.ticketPrice}
+                    onChange={e => setEditForm({ ...editForm, ticketPrice: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Total Tickets</label>
+                  <input type="number" required min="1" value={editForm.totalTickets}
+                    onChange={e => setEditForm({ ...editForm, totalTickets: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea required rows={3} value={editForm.description}
+                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm resize-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Image URL (optional)</label>
+                <input type="url" value={editForm.imageUrl}
+                  onChange={e => setEditForm({ ...editForm, imageUrl: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={savingEdit}
+                  className="flex-1 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition disabled:opacity-50">
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button type="button" onClick={() => setEditingEvent(null)}
+                  className="flex-1 py-2.5 bg-secondary text-foreground font-medium rounded-lg hover:bg-border transition">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
