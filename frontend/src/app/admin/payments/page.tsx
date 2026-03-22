@@ -67,7 +67,7 @@ export default function AdminPaymentsPage() {
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        {['', 'completed', 'pending', 'failed', 'refunded'].map(status => (
+        {['', 'completed', /* 'pending', */ 'failed', 'refunded'].map(status => (
           <button key={status} onClick={() => { setStatusFilter(status); setPage(1); }}
             className={`px-3 py-1.5 rounded-full text-sm font-medium capitalize transition ${statusFilter === status ? 'bg-primary text-white' : 'bg-secondary hover:bg-primary/10'}`}>
             {status || 'All'}

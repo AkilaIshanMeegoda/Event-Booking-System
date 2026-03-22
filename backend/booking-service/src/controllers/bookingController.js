@@ -36,6 +36,7 @@ exports.createBooking = async (req, res, next) => {
     // Step 3 — Create booking record (pending)
     booking = await Booking.create({
       userId,
+      userEmail: req.user.email || '',
       eventId,
       eventTitle: eventData.title,
       ticketCount,

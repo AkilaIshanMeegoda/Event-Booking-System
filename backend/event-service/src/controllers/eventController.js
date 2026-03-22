@@ -118,11 +118,19 @@ exports.updateEvent = async (req, res, next) => {
   }
 };
 
-// DELETE /api/events/:id — Admin only (soft delete)
+// DELETE /api/events/:id — Admin or the organizer who created the event (soft delete)
 exports.deleteEvent = async (req, res, next) => {
   try {
-    const event = await Event.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+    const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ success: false, message: 'Event not found.' });
+
+    // Organizer can only delete their own events
+    if (req.user.role === 'organizer' && event.organizerId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'You can only delete your own events.' });
+    }
+
+    event.isActive = false;
+    await event.save();
     res.json({ success: true, message: 'Event deleted', event });
   } catch (error) {
     next(error);

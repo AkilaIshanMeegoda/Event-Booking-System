@@ -79,7 +79,7 @@ export default function AdminBookingsPage() {
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        {['', 'confirmed', 'pending', 'cancelled', 'refunded', 'failed'].map(status => (
+        {['', 'confirmed', /* 'pending', */ 'cancelled', /* 'refunded', */ 'failed'].map(status => (
           <button key={status} onClick={() => { setStatusFilter(status); setPage(1); }}
             className={`px-3 py-1.5 rounded-full text-sm font-medium capitalize transition ${statusFilter === status ? 'bg-primary text-white' : 'bg-secondary hover:bg-primary/10'}`}>
             {status || 'All'}
@@ -100,6 +100,7 @@ export default function AdminBookingsPage() {
               <thead>
                 <tr className="bg-secondary/50 border-b border-border">
                   <th className="text-left px-4 py-3 font-medium text-muted">Event</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted">User Email</th>
                   <th className="text-left px-4 py-3 font-medium text-muted">Tickets</th>
                   <th className="text-left px-4 py-3 font-medium text-muted">Amount</th>
                   <th className="text-left px-4 py-3 font-medium text-muted">Status</th>
@@ -112,6 +113,7 @@ export default function AdminBookingsPage() {
                 {bookings.map(b => (
                   <tr key={b._id} className="border-b border-border/50 hover:bg-secondary/30">
                     <td className="px-4 py-3 font-medium max-w-[200px] truncate">{b.eventTitle}</td>
+                    <td className="px-4 py-3 text-muted text-xs">{b.userEmail || b.userId}</td>
                     <td className="px-4 py-3">{b.ticketCount}</td>
                     <td className="px-4 py-3 text-primary font-medium">{formatCurrency(b.totalAmount)}</td>
                     <td className="px-4 py-3">
