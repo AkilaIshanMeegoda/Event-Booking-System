@@ -24,7 +24,7 @@
         { "name": "JWT_SECRET", "value": "ctse-super-secret-jwt-key-2026" },
         { "name": "JWT_EXPIRE", "value": "24h" },
         { "name": "SERVICE_KEY", "value": "ctse-internal-service-key-2026" },
-        { "name": "ALLOWED_ORIGINS", "value": "http://ctse-ticket-alb-796422408.ap-south-1.elb.amazonaws.com" }
+        { "name": "ALLOWED_ORIGINS", "value": "https://3io1rqmtw1.execute-api.ap-south-1.amazonaws.com/prod" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

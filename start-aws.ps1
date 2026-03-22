@@ -235,15 +235,20 @@ $content = $content -replace 'https://[a-z0-9]+\.execute-api\.ap-south-1\.amazon
 $taskDefArn = (aws ecs register-task-definition --region ap-south-1 --cli-input-json "file://backend/task-definitions/frontend.json" --query "taskDefinition.taskDefinitionArn" --output text)
 Write-Host "  Registered: $taskDefArn"
 
-# ---- Step 7: Update backend task definitions with ALB DNS for inter-service calls ----
+# ---- Step 7: Update backend task definitions with API Gateway URL for inter-service calls ----
+# All service-to-service calls route through API Gateway (stable URL, CloudWatch metrics, throttling)
 Write-Host ""
-Write-Host "[7/8] Updating backend task definitions with ALB DNS for inter-service calls..."
+Write-Host "[7/8] Updating backend task definitions with API Gateway URL for inter-service calls..."
 $backendTasks = @("user-service","event-service","payment-service","booking-service","review-service","notification-service","reporting-service")
 foreach ($svc in $backendTasks) {
     $taskFile = "backend\task-definitions\$svc.json"
     if (Test-Path $taskFile) {
         $taskContent = Get-Content $taskFile -Raw
-        $taskContent = $taskContent -replace 'http://ctse-ticket-alb-\d+\.ap-south-1\.elb\.amazonaws\.com', "http://$ALB_DNS"
+        # Replace any previous ALB URL or API GW URL with the current API GW URL
+        $taskContent = $taskContent -replace 'http://ctse-ticket-alb-\d+\.ap-south-1\.elb\.amazonaws\.com', $API_GW_URL
+        $taskContent = $taskContent -replace 'https://[a-z0-9]+\.execute-api\.ap-south-1\.amazonaws\.com/prod', $API_GW_URL
+        # Fix notification path typo (/api/notify -> /api/notifications)
+        $taskContent = $taskContent -replace '/api/notify"', '/api/notifications"'
         [System.IO.File]::WriteAllText("$PWD\$taskFile", $taskContent)
         $tdArn = (aws ecs register-task-definition --region ap-south-1 --cli-input-json "file://$taskFile" --query "taskDefinition.taskDefinitionArn" --output text)
         Write-Host "  -> $svc registered: $tdArn"
