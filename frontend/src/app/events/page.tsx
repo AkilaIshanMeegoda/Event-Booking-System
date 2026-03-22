@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { eventsApi } from '@/lib/api';
@@ -9,7 +9,7 @@ import { FiSearch, FiCalendar, FiMapPin, FiFilter } from 'react-icons/fi';
 
 const CATEGORIES = ['all', 'music', 'concert', 'sports', 'conference', 'theater', 'workshop', 'festival', 'meetup', 'other'];
 
-export default function EventsPage() {
+function EventsContent() {
   const searchParams = useSearchParams();
   const [events, setEvents] = useState<any[]>([]);
   const [pagination, setPagination] = useState<any>({});
@@ -239,5 +239,17 @@ export default function EventsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    }>
+      <EventsContent />
+    </Suspense>
   );
 }
