@@ -18,7 +18,7 @@ exports.createBooking = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
-    const { eventId, ticketCount } = req.body;
+    const { eventId, ticketCount, paymentMethodId } = req.body;
     const userId = req.user.id;
 
     // Step 1 — Check event availability via Event Service
@@ -53,7 +53,9 @@ exports.createBooking = async (req, res, next) => {
         bookingId: booking._id.toString(),
         userId,
         amount: totalAmount,
-        eventTitle: eventData.title
+        eventTitle: eventData.title,
+        paymentMethodId,
+        currency: 'usd'
       }, { headers: serviceHeaders });
       paymentResult = data;
     } catch (payError) {
