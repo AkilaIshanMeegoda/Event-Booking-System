@@ -18,8 +18,7 @@ app.use(express.json());
 app.use(mongoSanitize());
 app.use(morgan('combined'));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
-app.use(limiter);
+// Rate limiting disabled — all traffic shares one IP behind the ALB
 
 const swaggerSpec = swaggerJsdoc({
   definition: {

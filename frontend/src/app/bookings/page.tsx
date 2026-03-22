@@ -67,7 +67,7 @@ export default function BookingsPage() {
 
       {/* Filters */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {['', 'confirmed', 'pending', 'cancelled', 'refunded', 'failed'].map(status => (
+        {['', 'confirmed', 'cancelled', 'failed'].map(status => (
           <button
             key={status}
             onClick={() => { setStatusFilter(status); setPage(1); }}

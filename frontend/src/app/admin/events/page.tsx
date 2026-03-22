@@ -74,6 +74,13 @@ export default function AdminEventsPage() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
+    // Validations
+    if (!editForm.title?.trim() || editForm.title.trim().length < 3) { toast.error('Title must be at least 3 characters'); return; }
+    if (!editForm.description?.trim() || editForm.description.trim().length < 10) { toast.error('Description must be at least 10 characters'); return; }
+    if (Number(editForm.totalTickets) < 1) { toast.error('Total tickets must be at least 1'); return; }
+    if (Number(editForm.ticketPrice) < 0) { toast.error('Ticket price cannot be negative'); return; }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (!editForm.date || new Date(editForm.date) < today) { toast.error('Event date must be today or in the future'); return; }
     setSavingEdit(true);
     try {
       const payload: any = {
