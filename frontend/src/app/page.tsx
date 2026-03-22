@@ -269,7 +269,7 @@ export default function Home() {
       <section className="bg-gray-900 py-16 sm:py-20">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Why Choose EventHub?</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Why Choose Us?</h2>
             <p className="text-gray-400 max-w-2xl mx-auto">We provide everything you need for a seamless event booking experience</p>
           </div>
 
