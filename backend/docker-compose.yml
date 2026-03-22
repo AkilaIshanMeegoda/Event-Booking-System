@@ -70,7 +70,6 @@ services:
       - SERVICE_KEY=ctse-internal-service-key-2026
       - BOOKING_SERVICE_URL=http://booking-service:5004
       - NOTIFICATION_SERVICE_URL=http://notification-service:5006
-      - STRIPE_SECRET_KEY=
       - ALLOWED_ORIGINS=http://localhost:3000
     networks:
       - ticket-network
