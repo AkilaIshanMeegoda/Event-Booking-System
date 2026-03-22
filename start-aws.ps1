@@ -62,31 +62,62 @@ $TG_FRONTEND     = Get-OrCreateTG "ctse-frontend-tg"          3000 "/"
 # ---- Step 3: Create or reuse Listener (default to frontend) ----
 Write-Host ""
 Write-Host "[3/8] Creating listener..."
-$LISTENER_ARN = (aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --query 'Listeners[0].ListenerArn' --output text 2>$null)
+$LISTENER_ARN = (aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --query 'Listeners[?Port==`80`].ListenerArn' --output text 2>$null)
 if (-not $LISTENER_ARN -or $LISTENER_ARN -eq "None") {
     $LISTENER_ARN = (aws elbv2 create-listener `
         --load-balancer-arn $ALB_ARN `
         --protocol HTTP --port 80 `
         --default-actions "Type=forward,TargetGroupArn=$TG_FRONTEND" `
         --query 'Listeners[0].ListenerArn' --output text)
-    Write-Host "  Created listener: $LISTENER_ARN"
+    Write-Host "  Created port 80 listener: $LISTENER_ARN"
 } else {
-    Write-Host "  Listener already exists: $LISTENER_ARN"
+    Write-Host "  Port 80 listener already exists: $LISTENER_ARN"
 }
 
-# ---- Step 4: Create Routing Rules (skip if already present) ----
-Write-Host ""
-Write-Host "[4/8] Creating routing rules..."
+# Remove any /api/* routing rules from port 80 -- browser traffic must all go to Next.js
+$p80Rules = (aws elbv2 describe-rules --listener-arn $LISTENER_ARN --output json 2>$null | ConvertFrom-Json)
+foreach ($rule in $p80Rules.Rules) {
+    if ($rule.Priority -ne "default") {
+        $null = aws elbv2 delete-rule --rule-arn $rule.RuleArn 2>&1
+        Write-Host "  Removed port 80 routing rule (priority $($rule.Priority)) -- moved to port 8080"
+    }
+}
 
-# Get existing rule priorities
-$existingPriorities = (aws elbv2 describe-rules --listener-arn $LISTENER_ARN --query "Rules[*].Priority" --output text 2>$null)
+# ---- Step 4: Create port 8080 listener + routing rules (for API Gateway traffic) ----
+Write-Host ""
+Write-Host "[4/8] Creating port 8080 listener and routing rules (for API Gateway)..."
+
+# Add inbound port 8080 to ALB SG (idempotent — API Gateway calls back on this port)
+$sg8080Check = (aws ec2 describe-security-groups --group-ids $ALB_SG --query 'SecurityGroups[0].IpPermissions[?FromPort==`8080`].FromPort' --output text 2>$null)
+if (-not $sg8080Check -or $sg8080Check -eq "None") {
+    $null = aws ec2 authorize-security-group-ingress --group-id $ALB_SG --protocol tcp --port 8080 --cidr 0.0.0.0/0 2>&1
+    Write-Host "  Added port 8080 inbound rule to ALB SG"
+} else {
+    Write-Host "  Port 8080 SG rule already exists"
+}
+
+# Create port 8080 listener (default -> frontend, service rules added below)
+$LISTENER_8080_ARN = (aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --query 'Listeners[?Port==`8080`].ListenerArn' --output text 2>$null)
+if (-not $LISTENER_8080_ARN -or $LISTENER_8080_ARN -eq "None") {
+    $LISTENER_8080_ARN = (aws elbv2 create-listener `
+        --load-balancer-arn $ALB_ARN `
+        --protocol HTTP --port 8080 `
+        --default-actions "Type=forward,TargetGroupArn=$TG_FRONTEND" `
+        --query 'Listeners[0].ListenerArn' --output text)
+    Write-Host "  Created port 8080 listener: $LISTENER_8080_ARN"
+} else {
+    Write-Host "  Port 8080 listener already exists: $LISTENER_8080_ARN"
+}
+
+# Get existing rule priorities on port 8080 listener
+$existingPriorities = (aws elbv2 describe-rules --listener-arn $LISTENER_8080_ARN --query "Rules[*].Priority" --output text 2>$null)
 
 function New-RuleIfMissing($priority, $condFile, $tgArn, $label) {
     if ($existingPriorities -match "\b$priority\b") {
         Write-Host "  -> rule $priority already exists: $label"
         return
     }
-    aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority $priority --conditions "file://$condFile" --actions "Type=forward,TargetGroupArn=$tgArn" --output text >$null 2>$null
+    aws elbv2 create-rule --listener-arn $LISTENER_8080_ARN --priority $priority --conditions "file://$condFile" --actions "Type=forward,TargetGroupArn=$tgArn" --output text >$null 2>$null
     Write-Host "  -> rule $priority : $label"
 }
 
@@ -158,10 +189,10 @@ $null = aws apigateway put-integration `
     --http-method ANY `
     --type HTTP_PROXY `
     --integration-http-method ANY `
-    --uri "http://$ALB_DNS/{proxy}" `
+    --uri "http://${ALB_DNS}:8080/{proxy}" `
     --request-parameters "integration.request.path.proxy=method.request.path.proxy" `
     --output text 2>&1
-Write-Host "  -> HTTP_PROXY integration -> http://$ALB_DNS/{proxy}"
+Write-Host "  -> HTTP_PROXY integration -> http://${ALB_DNS}:8080/{proxy}"
 
 # Set up ANY method + HTTP_PROXY integration on root (/) for frontend
 $null = aws apigateway put-method `
@@ -177,9 +208,9 @@ $null = aws apigateway put-integration `
     --http-method ANY `
     --type HTTP_PROXY `
     --integration-http-method ANY `
-    --uri "http://$ALB_DNS/" `
+    --uri "http://${ALB_DNS}:8080/" `
     --output text 2>&1
-Write-Host "  -> Root (/) -> http://$ALB_DNS/"
+Write-Host "  -> Root (/) -> http://${ALB_DNS}:8080/"
 
 # Deploy to 'prod' stage
 $null = aws apigateway create-deployment `
