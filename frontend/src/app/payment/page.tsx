@@ -7,11 +7,30 @@ import { bookingsApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { CardElement, Elements, useElements, useStripe } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
+
+const cardElementOptions = {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#1f2937',
+      '::placeholder': { color: '#9ca3af' }
+    },
+    invalid: { color: '#dc2626' }
+  }
+};
 
 function PaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const stripe = useStripe();
+  const elements = useElements();
 
   const eventId = searchParams.get('eventId') || '';
   const eventTitle = searchParams.get('eventTitle') || '';
@@ -20,13 +39,8 @@ function PaymentForm() {
   const total = Number(searchParams.get('total') || '0');
 
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'failed'>('form');
-  const [cardForm, setCardForm] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiry: '',
-    cvv: '',
-  });
   const [bookingId, setBookingId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -34,47 +48,46 @@ function PaymentForm() {
     if (!eventId) router.push('/events');
   }, [user, authLoading, eventId, router]);
 
-  const formatCard = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 16);
-    return digits.replace(/(.{4})/g, '$1 ').trim();
-  };
-
-  const formatExpiry = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 4);
-    if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return digits;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basic validation
-    const cardDigits = cardForm.cardNumber.replace(/\s/g, '');
-    if (cardDigits.length < 16) {
-      toast.error('Please enter a valid 16-digit card number');
+    if (!stripePromise) {
+      toast.error('Stripe publishable key is missing. Set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.');
       return;
     }
-    if (!cardForm.cardName.trim()) {
-      toast.error('Please enter the cardholder name');
+
+    if (!stripe || !elements) {
+      toast.error('Stripe is still loading. Please try again.');
       return;
     }
-    if (cardForm.expiry.length < 5) {
-      toast.error('Please enter a valid expiry date (MM/YY)');
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      toast.error('Card field is not ready.');
       return;
     }
-    if (cardForm.cvv.length < 3) {
-      toast.error('Please enter a valid CVV');
+
+    setIsSubmitting(true);
+
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: 'card',
+      card: cardElement
+    });
+
+    if (error || !paymentMethod) {
+      toast.error(error?.message || 'Unable to validate card details');
+      setIsSubmitting(false);
       return;
     }
 
     setStep('processing');
 
     try {
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2500));
-
-      // Create the booking (which triggers backend payment processing)
-      const data = await bookingsApi.create({ eventId, ticketCount });
+      const data = await bookingsApi.create({
+        eventId,
+        ticketCount,
+        paymentMethodId: paymentMethod.id
+      });
 
       if (data.booking.status === 'confirmed') {
         setBookingId(data.booking._id);
@@ -85,12 +98,13 @@ function PaymentForm() {
     } catch (err: any) {
       toast.error(err.message || 'Payment failed');
       setStep('failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   if (!user || !eventId) return null;
 
-  // Processing step
   if (step === 'processing') {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
@@ -117,7 +131,6 @@ function PaymentForm() {
     );
   }
 
-  // Success step
   if (step === 'success') {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
@@ -159,7 +172,6 @@ function PaymentForm() {
     );
   }
 
-  // Failed step
   if (step === 'failed') {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
@@ -188,7 +200,6 @@ function PaymentForm() {
     );
   }
 
-  // Payment form step
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <Link href={`/events/${eventId}`} className="text-sm text-muted hover:text-primary mb-4 inline-block">
@@ -198,7 +209,6 @@ function PaymentForm() {
       <h1 className="text-2xl font-bold mb-6">Complete Payment</h1>
 
       <div className="grid gap-6">
-        {/* Order Summary */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-medium text-muted mb-3">ORDER SUMMARY</h3>
           <p className="font-semibold mb-3">{eventTitle}</p>
@@ -214,79 +224,35 @@ function PaymentForm() {
           </div>
         </div>
 
-        {/* Card Form */}
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-medium text-muted mb-4">PAYMENT DETAILS</h3>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Card Number</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={cardForm.cardNumber}
-                  onChange={e => setCardForm({ ...cardForm, cardNumber: formatCard(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition text-base tracking-wider"
-                  placeholder="1234 5678 9012 3456"
-                  maxLength={19}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
-                  <span className="text-lg">💳</span>
-                </div>
+              <label className="block text-sm font-medium mb-1">Card Details</label>
+              <div className="w-full px-4 py-3 rounded-lg border border-border bg-white focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition">
+                <CardElement options={cardElementOptions} />
               </div>
-              <p className="text-xs text-muted mt-1">Demo: enter any 16 digits</p>
+              <p className="text-xs text-muted mt-1">Use Stripe test card: 4242 4242 4242 4242</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Cardholder Name</label>
-              <input
-                type="text"
-                required
-                value={cardForm.cardName}
-                onChange={e => setCardForm({ ...cardForm, cardName: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                placeholder="John Doe"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Expiry Date</label>
-                <input
-                  type="text"
-                  required
-                  value={cardForm.expiry}
-                  onChange={e => setCardForm({ ...cardForm, expiry: formatExpiry(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  placeholder="MM/YY"
-                  maxLength={5}
-                />
+            {!stripePromise && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                Stripe is not configured. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in frontend environment.
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">CVV</label>
-                <input
-                  type="text"
-                  required
-                  value={cardForm.cvv}
-                  onChange={e => setCardForm({ ...cardForm, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  placeholder="123"
-                  maxLength={4}
-                />
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="mt-6 pt-4 border-t border-border">
             <button
               type="submit"
-              className="w-full py-3.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition text-base"
+              disabled={isSubmitting || !stripePromise}
+              className="w-full py-3.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Pay {formatCurrency(total)}
+              {isSubmitting ? 'Preparing Payment...' : `Pay ${formatCurrency(total)}`}
             </button>
             <p className="text-xs text-center text-muted mt-3">
-              🔒 This is a demo payment — no real charges will be made
+              Secure payment powered by Stripe test mode
             </p>
           </div>
         </form>
@@ -296,13 +262,27 @@ function PaymentForm() {
 }
 
 export default function PaymentPage() {
+  if (!stripePromise) {
+    return (
+      <Suspense fallback={
+        <div className="max-w-md mx-auto px-4 py-20 text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+        </div>
+      }>
+        <PaymentForm />
+      </Suspense>
+    );
+  }
+
   return (
-    <Suspense fallback={
-      <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-      </div>
-    }>
-      <PaymentForm />
-    </Suspense>
+    <Elements stripe={stripePromise}>
+      <Suspense fallback={
+        <div className="max-w-md mx-auto px-4 py-20 text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+        </div>
+      }>
+        <PaymentForm />
+      </Suspense>
+    </Elements>
   );
 }
