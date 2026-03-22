@@ -1,9 +1,10 @@
 # ==============================================================
 # CTSE Event Ticket Platform - START ALL AWS RESOURCES
 # Usage: .\start-aws.ps1
+# Idempotent: safe to re-run — reuses existing resources
 # ==============================================================
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 Write-Host "=== STARTING ALL AWS RESOURCES ===" -ForegroundColor Cyan
 
 $VPC_ID   = "vpc-0a7a3d066a19734a0"
@@ -12,56 +13,114 @@ $SUBNET_B = "subnet-0afb3448ecc28e503"
 $ALB_SG   = "sg-0636ef67560ddd24a"
 $ECS_SG   = "sg-08117cdeff00a7f7a"
 
-# ---- Step 1: Create ALB ----
+# ---- Step 1: Create or reuse ALB ----
 Write-Host ""
-Write-Host "[1/6] Creating ALB..."
-$ALB_ARN = (aws elbv2 create-load-balancer `
-    --name ctse-ticket-alb `
-    --subnets $SUBNET_A $SUBNET_B `
-    --security-groups $ALB_SG `
-    --scheme internet-facing `
-    --type application `
-    --query 'LoadBalancers[0].LoadBalancerArn' --output text)
-Write-Host "  ALB ARN: $ALB_ARN"
+Write-Host "[1/8] Creating ALB..."
+$ALB_ARN = (aws elbv2 describe-load-balancers --names ctse-ticket-alb --query 'LoadBalancers[0].LoadBalancerArn' --output text 2>$null)
+if (-not $ALB_ARN -or $ALB_ARN -eq "None") {
+    $ALB_ARN = (aws elbv2 create-load-balancer `
+        --name ctse-ticket-alb `
+        --subnets $SUBNET_A $SUBNET_B `
+        --security-groups $ALB_SG `
+        --scheme internet-facing `
+        --type application `
+        --query 'LoadBalancers[0].LoadBalancerArn' --output text)
+    Write-Host "  Created ALB: $ALB_ARN"
+} else {
+    Write-Host "  ALB already exists: $ALB_ARN"
+}
 
 $ALB_DNS = (aws elbv2 describe-load-balancers `
     --load-balancer-arns $ALB_ARN `
     --query 'LoadBalancers[0].DNSName' --output text)
 Write-Host "  ALB DNS: $ALB_DNS"
 
-# ---- Step 2: Create Target Groups ----
+# ---- Step 2: Create or reuse Target Groups ----
 Write-Host ""
-Write-Host "[2/6] Creating target groups..."
-$TG_USER = (aws elbv2 create-target-group --name ctse-user-service-tg --protocol HTTP --port 5001 --vpc-id $VPC_ID --target-type ip --health-check-path /health --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_USER: $TG_USER"
-$TG_EVENT = (aws elbv2 create-target-group --name ctse-event-service-tg --protocol HTTP --port 5002 --vpc-id $VPC_ID --target-type ip --health-check-path /health --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_EVENT: $TG_EVENT"
-$TG_PAYMENT = (aws elbv2 create-target-group --name ctse-payment-service-tg --protocol HTTP --port 5003 --vpc-id $VPC_ID --target-type ip --health-check-path /health --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_PAYMENT: $TG_PAYMENT"
-$TG_BOOKING = (aws elbv2 create-target-group --name ctse-booking-service-tg --protocol HTTP --port 5004 --vpc-id $VPC_ID --target-type ip --health-check-path /health --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_BOOKING: $TG_BOOKING"
-$TG_REVIEW = (aws elbv2 create-target-group --name ctse-review-service-tg --protocol HTTP --port 5005 --vpc-id $VPC_ID --target-type ip --health-check-path /health --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_REVIEW: $TG_REVIEW"
-$TG_NOTIFICATION = (aws elbv2 create-target-group --name ctse-notification-svc-tg --protocol HTTP --port 5006 --vpc-id $VPC_ID --target-type ip --health-check-path /health --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_NOTIFICATION: $TG_NOTIFICATION"
-$TG_REPORTING = (aws elbv2 create-target-group --name ctse-reporting-service-tg --protocol HTTP --port 5007 --vpc-id $VPC_ID --target-type ip --health-check-path /health --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_REPORTING: $TG_REPORTING"
-$TG_FRONTEND = (aws elbv2 create-target-group --name ctse-frontend-tg --protocol HTTP --port 3000 --vpc-id $VPC_ID --target-type ip --health-check-path / --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
-Write-Host "  TG_FRONTEND: $TG_FRONTEND"
+Write-Host "[2/8] Creating target groups..."
 
-# ---- Step 3: Create Listener (default to frontend) ----
-Write-Host ""
-Write-Host "[3/6] Creating listener..."
-$LISTENER_ARN = (aws elbv2 create-listener `
-    --load-balancer-arn $ALB_ARN `
-    --protocol HTTP --port 80 `
-    --default-actions "Type=forward,TargetGroupArn=$TG_FRONTEND" `
-    --query 'Listeners[0].ListenerArn' --output text)
-Write-Host "  Listener: $LISTENER_ARN"
+function Get-OrCreateTG($name, $port, $healthPath) {
+    $arn = (aws elbv2 describe-target-groups --names $name --query 'TargetGroups[0].TargetGroupArn' --output text 2>$null)
+    if ($arn -and $arn -ne "None") {
+        Write-Host "  $name exists: $arn"
+        return $arn
+    }
+    $arn = (aws elbv2 create-target-group --name $name --protocol HTTP --port $port --vpc-id $VPC_ID --target-type ip --health-check-path $healthPath --health-check-interval-seconds 30 --healthy-threshold-count 2 --unhealthy-threshold-count 3 --query 'TargetGroups[0].TargetGroupArn' --output text)
+    Write-Host "  $name created: $arn"
+    return $arn
+}
 
-# ---- Step 4: Create Routing Rules ----
+$TG_USER         = Get-OrCreateTG "ctse-user-service-tg"      5001 "/health"
+$TG_EVENT        = Get-OrCreateTG "ctse-event-service-tg"     5002 "/health"
+$TG_PAYMENT      = Get-OrCreateTG "ctse-payment-service-tg"   5003 "/health"
+$TG_BOOKING      = Get-OrCreateTG "ctse-booking-service-tg"   5004 "/health"
+$TG_REVIEW       = Get-OrCreateTG "ctse-review-service-tg"    5005 "/health"
+$TG_NOTIFICATION = Get-OrCreateTG "ctse-notification-svc-tg"  5006 "/health"
+$TG_REPORTING    = Get-OrCreateTG "ctse-reporting-service-tg" 5007 "/health"
+$TG_FRONTEND     = Get-OrCreateTG "ctse-frontend-tg"          3000 "/"
+
+# ---- Step 3: Create or reuse Listener (default to frontend) ----
 Write-Host ""
-Write-Host "[4/6] Creating routing rules..."
+Write-Host "[3/8] Creating listener..."
+$LISTENER_ARN = (aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --query 'Listeners[?Port==`80`].ListenerArn' --output text 2>$null)
+if (-not $LISTENER_ARN -or $LISTENER_ARN -eq "None") {
+    $LISTENER_ARN = (aws elbv2 create-listener `
+        --load-balancer-arn $ALB_ARN `
+        --protocol HTTP --port 80 `
+        --default-actions "Type=forward,TargetGroupArn=$TG_FRONTEND" `
+        --query 'Listeners[0].ListenerArn' --output text)
+    Write-Host "  Created port 80 listener: $LISTENER_ARN"
+} else {
+    Write-Host "  Port 80 listener already exists: $LISTENER_ARN"
+}
+
+# Remove any /api/* routing rules from port 80 -- browser traffic must all go to Next.js
+$p80Rules = (aws elbv2 describe-rules --listener-arn $LISTENER_ARN --output json 2>$null | ConvertFrom-Json)
+foreach ($rule in $p80Rules.Rules) {
+    if ($rule.Priority -ne "default") {
+        $null = aws elbv2 delete-rule --rule-arn $rule.RuleArn 2>&1
+        Write-Host "  Removed port 80 routing rule (priority $($rule.Priority)) -- moved to port 8080"
+    }
+}
+
+# ---- Step 4: Create port 8080 listener + routing rules (for API Gateway traffic) ----
+Write-Host ""
+Write-Host "[4/8] Creating port 8080 listener and routing rules (for API Gateway)..."
+
+# Add inbound port 8080 to ALB SG (idempotent — API Gateway calls back on this port)
+$sg8080Check = (aws ec2 describe-security-groups --group-ids $ALB_SG --query 'SecurityGroups[0].IpPermissions[?FromPort==`8080`].FromPort' --output text 2>$null)
+if (-not $sg8080Check -or $sg8080Check -eq "None") {
+    $null = aws ec2 authorize-security-group-ingress --group-id $ALB_SG --protocol tcp --port 8080 --cidr 0.0.0.0/0 2>&1
+    Write-Host "  Added port 8080 inbound rule to ALB SG"
+} else {
+    Write-Host "  Port 8080 SG rule already exists"
+}
+
+# Create port 8080 listener (default -> frontend, service rules added below)
+$LISTENER_8080_ARN = (aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --query 'Listeners[?Port==`8080`].ListenerArn' --output text 2>$null)
+if (-not $LISTENER_8080_ARN -or $LISTENER_8080_ARN -eq "None") {
+    $LISTENER_8080_ARN = (aws elbv2 create-listener `
+        --load-balancer-arn $ALB_ARN `
+        --protocol HTTP --port 8080 `
+        --default-actions "Type=forward,TargetGroupArn=$TG_FRONTEND" `
+        --query 'Listeners[0].ListenerArn' --output text)
+    Write-Host "  Created port 8080 listener: $LISTENER_8080_ARN"
+} else {
+    Write-Host "  Port 8080 listener already exists: $LISTENER_8080_ARN"
+}
+
+# Get existing rule priorities on port 8080 listener
+$existingPriorities = (aws elbv2 describe-rules --listener-arn $LISTENER_8080_ARN --query "Rules[*].Priority" --output text 2>$null)
+
+function New-RuleIfMissing($priority, $condFile, $tgArn, $label) {
+    if ($existingPriorities -match "\b$priority\b") {
+        Write-Host "  -> rule $priority already exists: $label"
+        return
+    }
+    aws elbv2 create-rule --listener-arn $LISTENER_8080_ARN --priority $priority --conditions "file://$condFile" --actions "Type=forward,TargetGroupArn=$tgArn" --output text >$null 2>$null
+    Write-Host "  -> rule $priority : $label"
+}
+
 [System.IO.File]::WriteAllText("$env:TEMP\r10.json", '[{"Field":"path-pattern","Values":["/api/auth","/api/auth/*","/api/users","/api/users/*"]}]')
 [System.IO.File]::WriteAllText("$env:TEMP\r20.json", '[{"Field":"path-pattern","Values":["/api/events","/api/events/*"]}]')
 [System.IO.File]::WriteAllText("$env:TEMP\r30.json", '[{"Field":"path-pattern","Values":["/api/payments","/api/payments/*"]}]')
@@ -70,13 +129,13 @@ Write-Host "[4/6] Creating routing rules..."
 [System.IO.File]::WriteAllText("$env:TEMP\r60.json", '[{"Field":"path-pattern","Values":["/api/notifications","/api/notifications/*"]}]')
 [System.IO.File]::WriteAllText("$env:TEMP\r70.json", '[{"Field":"path-pattern","Values":["/api/reports","/api/reports/*"]}]')
 
-aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 10 --conditions "file://$env:TEMP/r10.json" --actions "Type=forward,TargetGroupArn=$TG_USER"         --output text >$null ; Write-Host "  -> rule 10: /api/users + /api/auth -> user-service"
-aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 20 --conditions "file://$env:TEMP/r20.json" --actions "Type=forward,TargetGroupArn=$TG_EVENT"        --output text >$null ; Write-Host "  -> rule 20: /api/events -> event-service"
-aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 30 --conditions "file://$env:TEMP/r30.json" --actions "Type=forward,TargetGroupArn=$TG_PAYMENT"      --output text >$null ; Write-Host "  -> rule 30: /api/payments -> payment-service"
-aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 40 --conditions "file://$env:TEMP/r40.json" --actions "Type=forward,TargetGroupArn=$TG_BOOKING"      --output text >$null ; Write-Host "  -> rule 40: /api/bookings -> booking-service"
-aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 50 --conditions "file://$env:TEMP/r50.json" --actions "Type=forward,TargetGroupArn=$TG_REVIEW"       --output text >$null ; Write-Host "  -> rule 50: /api/reviews -> review-service"
-aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 60 --conditions "file://$env:TEMP/r60.json" --actions "Type=forward,TargetGroupArn=$TG_NOTIFICATION" --output text >$null ; Write-Host "  -> rule 60: /api/notifications -> notification-service"
-aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 70 --conditions "file://$env:TEMP/r70.json" --actions "Type=forward,TargetGroupArn=$TG_REPORTING"    --output text >$null ; Write-Host "  -> rule 70: /api/reports -> reporting-service"
+New-RuleIfMissing 10 "$env:TEMP/r10.json" $TG_USER         "/api/users + /api/auth -> user-service"
+New-RuleIfMissing 20 "$env:TEMP/r20.json" $TG_EVENT        "/api/events -> event-service"
+New-RuleIfMissing 30 "$env:TEMP/r30.json" $TG_PAYMENT      "/api/payments -> payment-service"
+New-RuleIfMissing 40 "$env:TEMP/r40.json" $TG_BOOKING      "/api/bookings -> booking-service"
+New-RuleIfMissing 50 "$env:TEMP/r50.json" $TG_REVIEW       "/api/reviews -> review-service"
+New-RuleIfMissing 60 "$env:TEMP/r60.json" $TG_NOTIFICATION "/api/notifications -> notification-service"
+New-RuleIfMissing 70 "$env:TEMP/r70.json" $TG_REPORTING    "/api/reports -> reporting-service"
 
 # ---- Step 5: Create / Update API Gateway REST API ----
 Write-Host ""
@@ -113,51 +172,52 @@ if (-not $PROXY_EXISTS -or $PROXY_EXISTS -eq "None") {
     Write-Host "  {proxy+} resource exists: $PROXY_ID"
 }
 
-# Create ANY method on /{proxy+} with HTTP_PROXY integration to ALB
-aws apigateway put-method `
+# Set up ANY method + HTTP_PROXY integration on /{proxy+}
+# put-method may return ConflictException if method already exists — that's fine
+$null = aws apigateway put-method `
     --rest-api-id $API_ID `
     --resource-id $PROXY_ID `
     --http-method ANY `
     --authorization-type NONE `
     --request-parameters "method.request.path.proxy=true" `
-    --output text >$null 2>$null
+    --output text 2>&1
 Write-Host "  -> ANY method on /{proxy+}"
 
-aws apigateway put-integration `
+$null = aws apigateway put-integration `
     --rest-api-id $API_ID `
     --resource-id $PROXY_ID `
     --http-method ANY `
     --type HTTP_PROXY `
     --integration-http-method ANY `
-    --uri "http://$ALB_DNS/{proxy}" `
+    --uri "http://${ALB_DNS}:8080/{proxy}" `
     --request-parameters "integration.request.path.proxy=method.request.path.proxy" `
-    --output text >$null
-Write-Host "  -> HTTP_PROXY integration -> http://$ALB_DNS/{proxy}"
+    --output text 2>&1
+Write-Host "  -> HTTP_PROXY integration -> http://${ALB_DNS}:8080/{proxy}"
 
-# Also create ANY method on root (/) for frontend
-aws apigateway put-method `
+# Set up ANY method + HTTP_PROXY integration on root (/) for frontend
+$null = aws apigateway put-method `
     --rest-api-id $API_ID `
     --resource-id $ROOT_ID `
     --http-method ANY `
     --authorization-type NONE `
-    --output text >$null 2>$null
+    --output text 2>&1
 
-aws apigateway put-integration `
+$null = aws apigateway put-integration `
     --rest-api-id $API_ID `
     --resource-id $ROOT_ID `
     --http-method ANY `
     --type HTTP_PROXY `
     --integration-http-method ANY `
-    --uri "http://$ALB_DNS/" `
-    --output text >$null
-Write-Host "  -> Root (/) -> http://$ALB_DNS/"
+    --uri "http://${ALB_DNS}:8080/" `
+    --output text 2>&1
+Write-Host "  -> Root (/) -> http://${ALB_DNS}:8080/"
 
 # Deploy to 'prod' stage
-aws apigateway create-deployment `
+$null = aws apigateway create-deployment `
     --rest-api-id $API_ID `
     --stage-name prod `
     --description "Auto-deployed by start-aws.ps1" `
-    --output text >$null
+    --output text 2>&1
 Write-Host "  -> Deployed to 'prod' stage"
 
 $API_GW_URL = "https://$API_ID.execute-api.ap-south-1.amazonaws.com/prod"
@@ -221,16 +281,31 @@ $services = @(
 )
 
 foreach ($s in $services) {
-    $svcName = (aws ecs create-service `
-        --cluster ctse-ticket-cluster `
-        --service-name $s.name `
-        --task-definition $s.td `
-        --desired-count 1 `
-        --launch-type FARGATE `
-        --network-configuration $netConfig `
-        --load-balancers "targetGroupArn=$($s.tg),containerName=$($s.name),containerPort=$($s.port)" `
-        --query "service.serviceName" --output text)
-    Write-Host "  -> created: $svcName"
+    # Check if service already exists and is ACTIVE
+    $svcStatus = (aws ecs describe-services --cluster ctse-ticket-cluster --services $s.name --query "services[0].status" --output text 2>$null)
+    if ($svcStatus -eq "ACTIVE") {
+        # Service exists — update it with latest task definition
+        $null = aws ecs update-service `
+            --cluster ctse-ticket-cluster `
+            --service $s.name `
+            --task-definition $s.td `
+            --desired-count 1 `
+            --force-new-deployment `
+            --query "service.serviceName" --output text 2>&1
+        Write-Host "  -> updated: $($s.name) (was already ACTIVE)"
+    } else {
+        # Service is INACTIVE or doesn't exist — create it
+        $svcName = (aws ecs create-service `
+            --cluster ctse-ticket-cluster `
+            --service-name $s.name `
+            --task-definition $s.td `
+            --desired-count 1 `
+            --launch-type FARGATE `
+            --network-configuration $netConfig `
+            --load-balancers "targetGroupArn=$($s.tg),containerName=$($s.name),containerPort=$($s.port)" `
+            --query "service.serviceName" --output text 2>&1)
+        Write-Host "  -> created: $svcName"
+    }
 }
 
 # ---- Final Status Check ----
