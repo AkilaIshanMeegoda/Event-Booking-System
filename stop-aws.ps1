@@ -51,7 +51,7 @@ if ($ALB_ARN -and $ALB_ARN -ne "None") {
 
 # Step 4: Delete ctse target groups only (safe - will not touch other TGs in your account)
 Write-Host ""
-Write-Host "[4/4] Deleting target groups..."
+Write-Host "[4/5] Deleting target groups..."
 $tgArns = (aws elbv2 describe-target-groups `
     --names ctse-user-service-tg ctse-event-service-tg ctse-payment-service-tg ctse-booking-service-tg `
             ctse-review-service-tg ctse-notification-svc-tg ctse-reporting-service-tg ctse-frontend-tg `
@@ -66,5 +66,19 @@ if ($tgArns) {
 }
 
 Write-Host ""
-Write-Host "=== ALL STOPPED. Cost = 0 ===" -ForegroundColor Green
+Write-Host "=== ALL STOPPED. Cost = $0 ===" -ForegroundColor Green
 Write-Host "Kept free (no charge): VPC, Subnets, Security Groups, ECS Cluster, ECR Images, Task Definitions, CloudWatch Logs"
+
+# Step 5: Delete API Gateway 'prod' stage (keep the API so URL stays stable on next start)
+Write-Host ""
+Write-Host "[5/5] Cleaning up API Gateway deployment..."
+$API_ID = (aws apigateway get-rest-apis --query "items[?name=='ctse-ticket-api'].id" --output text 2>$null)
+if ($API_ID -and $API_ID -ne "None") {
+    aws apigateway delete-stage --rest-api-id $API_ID --stage-name prod 2>$null
+    Write-Host "  -> Deleted 'prod' stage (API ID: $API_ID kept for stable URL)"
+} else {
+    Write-Host "  -> No API Gateway found, skipping"
+}
+
+Write-Host ""
+Write-Host "=== CLEANUP COMPLETE ===" -ForegroundColor Green
