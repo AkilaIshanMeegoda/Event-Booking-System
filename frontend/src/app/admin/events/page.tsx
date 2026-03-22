@@ -76,11 +76,13 @@ export default function AdminEventsPage() {
     if (!editingEvent) return;
     setSavingEdit(true);
     try {
-      await eventsApi.update(editingEvent._id, {
+      const payload: any = {
         ...editForm,
         ticketPrice: Number(editForm.ticketPrice),
         totalTickets: Number(editForm.totalTickets),
-      });
+      };
+      if (!payload.imageUrl) delete payload.imageUrl;
+      await eventsApi.update(editingEvent._id, payload);
       toast.success('Event updated');
       setEditingEvent(null);
       fetchEvents();
