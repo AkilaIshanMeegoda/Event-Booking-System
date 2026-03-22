@@ -6,16 +6,17 @@ import { useRouter } from 'next/navigation';
 import { notificationsApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { FiBell, FiCheck, FiTrash2 } from 'react-icons/fi';
 
-const typeIcons: Record<string, string> = {
-  booking_confirmation: '✅',
-  booking_cancellation: '❌',
-  payment_success: '💰',
-  payment_failed: '⚠️',
-  payment_refund: '💸',
-  review_posted: '⭐',
-  event_reminder: '🔔',
-  general: '📢',
+const typeConfig: Record<string, { icon: string; color: string }> = {
+  booking_confirmation: { icon: '✅', color: 'bg-emerald-100 text-emerald-600' },
+  booking_cancellation: { icon: '❌', color: 'bg-red-100 text-red-600' },
+  payment_success: { icon: '💰', color: 'bg-green-100 text-green-600' },
+  payment_failed: { icon: '⚠️', color: 'bg-amber-100 text-amber-600' },
+  payment_refund: { icon: '💸', color: 'bg-blue-100 text-blue-600' },
+  review_posted: { icon: '⭐', color: 'bg-yellow-100 text-yellow-600' },
+  event_reminder: { icon: '🔔', color: 'bg-blue-100 text-blue-600' },
+  general: { icon: '📢', color: 'bg-gray-100 text-gray-600' },
 };
 
 export default function NotificationsPage() {
@@ -85,105 +86,122 @@ export default function NotificationsPage() {
 
   if (authLoading) return (
     <div className="flex items-center justify-center min-h-[50vh]">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
     </div>
   );
   if (!user) return null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Notifications</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-500 py-10">
+        <div className="max-w-3xl mx-auto px-4 flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+              <FiBell className="w-7 h-7" /> Notifications
+            </h1>
+            {unreadCount > 0 && (
+              <p className="text-blue-100 mt-1">{unreadCount} unread notification{unreadCount > 1 ? 's' : ''}</p>
+            )}
+          </div>
           {unreadCount > 0 && (
-            <p className="text-sm text-muted mt-1">{unreadCount} unread</p>
+            <button
+              onClick={handleMarkAllRead}
+              className="px-4 py-2 bg-white/10 backdrop-blur text-white text-sm font-medium rounded-lg hover:bg-white/20 transition"
+            >
+              <FiCheck className="w-4 h-4 inline mr-1" /> Mark all read
+            </button>
           )}
         </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={handleMarkAllRead}
-            className="text-sm text-primary font-medium hover:underline"
-          >
-            Mark all as read
-          </button>
-        )}
       </div>
 
-      {loading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="animate-pulse bg-card border border-border rounded-lg p-4">
-              <div className="h-4 bg-secondary rounded w-2/3 mb-2" />
-              <div className="h-3 bg-secondary rounded w-full" />
-            </div>
-          ))}
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-4xl mb-4">🔔</p>
-          <p className="text-xl text-muted">No notifications yet</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {notifications.map((notif) => (
-            <div
-              key={notif._id}
-              className={`bg-card border rounded-lg p-4 transition ${
-                notif.isRead ? 'border-border' : 'border-primary/30 bg-primary/5'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-xl mt-0.5">{typeIcons[notif.type] || '📢'}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className={`text-sm font-medium ${!notif.isRead ? 'text-foreground' : 'text-foreground/70'}`}>
-                      {notif.title}
-                    </h3>
-                    <span className="text-xs text-muted whitespace-nowrap">{formatDateTime(notif.createdAt)}</span>
-                  </div>
-                  <p className="text-sm text-muted mt-1">{notif.message}</p>
-                  <div className="flex gap-3 mt-2">
-                    {!notif.isRead && (
-                      <button
-                        onClick={() => handleMarkRead(notif._id)}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Mark as read
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDelete(notif._id)}
-                      className="text-xs text-danger hover:underline"
-                    >
-                      Delete
-                    </button>
+      <div className="max-w-3xl mx-auto px-4 -mt-4">
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="animate-pulse bg-white rounded-2xl p-5 shadow-sm">
+                <div className="h-4 bg-gray-200 rounded w-2/3 mb-2" />
+                <div className="h-3 bg-gray-200 rounded w-full" />
+              </div>
+            ))}
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
+            <div className="text-5xl mb-4">🔔</div>
+            <p className="text-xl font-semibold text-gray-900 mb-2">No notifications yet</p>
+            <p className="text-gray-500">We&apos;ll notify you about bookings, payments, and more</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {notifications.map((notif) => {
+              const config = typeConfig[notif.type] || typeConfig.general;
+              return (
+                <div
+                  key={notif._id}
+                  className={`bg-white rounded-2xl p-5 transition shadow-sm hover:shadow-md ${
+                    !notif.isRead ? 'border-l-4 border-blue-500' : 'border border-gray-100'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${config.color}`}>
+                      {config.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className={`text-sm font-semibold ${!notif.isRead ? 'text-gray-900' : 'text-gray-600'}`}>
+                          {notif.title}
+                        </h3>
+                        <span className="text-xs text-gray-400 whitespace-nowrap">{formatDateTime(notif.createdAt)}</span>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">{notif.message}</p>
+                      <div className="flex gap-3 mt-3">
+                        {!notif.isRead && (
+                          <button
+                            onClick={() => handleMarkRead(notif._id)}
+                            className="text-xs text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                          >
+                            <FiCheck className="w-3 h-3" /> Mark as read
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(notif._id)}
+                          className="text-xs text-red-500 font-medium hover:text-red-600 flex items-center gap-1"
+                        >
+                          <FiTrash2 className="w-3 h-3" /> Delete
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            })}
 
-          {pagination.pages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-6">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-4 py-2 rounded-lg border border-border bg-white hover:bg-secondary disabled:opacity-50 transition text-sm"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-muted px-4">Page {page} of {pagination.pages}</span>
-              <button
-                onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
-                disabled={page === pagination.pages}
-                className="px-4 py-2 rounded-lg border border-border bg-white hover:bg-secondary disabled:opacity-50 transition text-sm"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+            {pagination.pages > 1 && (
+              <div className="flex justify-center items-center gap-2 py-4">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition text-sm font-medium"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(p => (
+                  <button key={p} onClick={() => setPage(p)} className={`w-10 h-10 rounded-xl text-sm font-medium transition ${p === page ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}>
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                  disabled={page === pagination.pages}
+                  className="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition text-sm font-medium"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
