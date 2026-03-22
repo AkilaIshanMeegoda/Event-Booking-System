@@ -66,6 +66,7 @@ exports.processPayment = async (req, res, next) => {
         currency: String(currency).toLowerCase(),
         payment_method: paymentMethodId,
         confirm: true,
+        payment_method_types: ['card'],
         automatic_payment_methods: { enabled: false },
         metadata: {
           bookingId,
