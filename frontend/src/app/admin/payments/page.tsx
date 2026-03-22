@@ -91,6 +91,8 @@ export default function AdminPaymentsPage() {
                   <th className="text-left px-4 py-3 font-medium text-muted">Event</th>
                   <th className="text-left px-4 py-3 font-medium text-muted">Amount</th>
                   <th className="text-left px-4 py-3 font-medium text-muted">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted">Refunded At</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted">Refund Ref</th>
                   <th className="text-left px-4 py-3 font-medium text-muted">Method</th>
                   <th className="text-left px-4 py-3 font-medium text-muted">Date</th>
                 </tr>
@@ -99,11 +101,13 @@ export default function AdminPaymentsPage() {
                 {payments.map(p => (
                   <tr key={p._id} className="border-b border-border/50 hover:bg-secondary/30">
                     <td className="px-4 py-3 font-mono text-xs">{p.transactionId}</td>
-                    <td className="px-4 py-3 max-w-[200px] truncate">{p.eventTitle || '-'}</td>
+                    <td className="px-4 py-3 max-w-50 truncate">{p.eventTitle || '-'}</td>
                     <td className="px-4 py-3 font-medium text-primary">{formatCurrency(p.amount)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${getStatusColor(p.status)}`}>{p.status}</span>
                     </td>
+                    <td className="px-4 py-3 text-muted">{p.refundedAt ? formatDateTime(p.refundedAt) : '-'}</td>
+                    <td className="px-4 py-3 text-muted font-mono text-xs">{p.stripeRefundId || '-'}</td>
                     <td className="px-4 py-3 text-muted">{p.paymentMethod}</td>
                     <td className="px-4 py-3 text-muted">{formatDateTime(p.createdAt)}</td>
                   </tr>

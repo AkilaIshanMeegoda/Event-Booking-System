@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { bookingsApi } from '@/lib/api';
+import { bookingsApi, paymentsApi } from '@/lib/api';
 import { formatDate, formatDateTime, formatCurrency, getStatusColor } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ export default function BookingDetailPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [booking, setBooking] = useState<any>(null);
+  const [payment, setPayment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
 
@@ -24,7 +25,18 @@ export default function BookingDetailPage() {
     }
     if (!id) return;
     bookingsApi.getById(id as string)
-      .then(d => setBooking(d.booking))
+      .then(async (d) => {
+        setBooking(d.booking);
+
+        if (d.booking?.paymentId) {
+          try {
+            const paymentRes = await paymentsApi.getById(d.booking.paymentId);
+            setPayment(paymentRes.payment);
+          } catch {
+            setPayment(null);
+          }
+        }
+      })
       .catch(() => toast.error('Booking not found'))
       .finally(() => setLoading(false));
   }, [id, user, authLoading, router]);
@@ -35,6 +47,16 @@ export default function BookingDetailPage() {
     try {
       const data = await bookingsApi.cancel(booking._id, 'Cancelled by user');
       setBooking(data.booking);
+
+      if (data.booking?.paymentId) {
+        try {
+          const paymentRes = await paymentsApi.getById(data.booking.paymentId);
+          setPayment(paymentRes.payment);
+        } catch {
+          setPayment(null);
+        }
+      }
+
       toast.success('Booking cancelled successfully');
     } catch (err: any) {
       toast.error(err.message || 'Cancel failed');
@@ -76,7 +98,7 @@ export default function BookingDetailPage() {
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary to-purple-600 text-white p-6">
+        <div className="bg-linear-to-r from-primary to-purple-600 text-white p-6">
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-xl font-bold mb-1">{booking.eventTitle}</h1>
@@ -129,6 +151,38 @@ export default function BookingDetailPage() {
               {booking.cancelReason && (
                 <p className="text-sm text-muted mt-1">Reason: {booking.cancelReason}</p>
               )}
+            </div>
+          )}
+
+          {payment && (
+            <div className="bg-secondary/40 border border-border rounded-lg p-4">
+              <p className="text-sm font-semibold mb-2">Payment & Refund Details</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted">Transaction ID</p>
+                  <p className="font-medium break-all">{payment.transactionId || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">Payment Method</p>
+                  <p className="font-medium capitalize">{payment.paymentMethod || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">Payment Status</p>
+                  <p className="font-medium capitalize">{payment.status}</p>
+                </div>
+                {payment.refundedAt && (
+                  <div>
+                    <p className="text-xs text-muted">Refunded At</p>
+                    <p className="font-medium">{formatDateTime(payment.refundedAt)}</p>
+                  </div>
+                )}
+                {payment.stripeRefundId && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted">Stripe Refund Reference</p>
+                    <p className="font-medium break-all">{payment.stripeRefundId}</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
