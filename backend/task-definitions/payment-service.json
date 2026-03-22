@@ -23,9 +23,10 @@
         { "name": "MONGO_URI", "value": "mongodb+srv://ctse:ctse123@cluster0.afkbz0b.mongodb.net/payment_db" },
         { "name": "JWT_SECRET", "value": "ctse-super-secret-jwt-key-2026" },
         { "name": "SERVICE_KEY", "value": "ctse-internal-service-key-2026" },
-        { "name": "BOOKING_SERVICE_URL", "value": "http://ctse-ticket-alb-796422408.ap-south-1.elb.amazonaws.com/api/bookings" },
-        { "name": "NOTIFICATION_SERVICE_URL", "value": "http://ctse-ticket-alb-796422408.ap-south-1.elb.amazonaws.com/api/notify" },
-        { "name": "ALLOWED_ORIGINS", "value": "http://ctse-ticket-alb-796422408.ap-south-1.elb.amazonaws.com" }
+        { "name": "BOOKING_SERVICE_URL", "value": "https://3io1rqmtw1.execute-api.ap-south-1.amazonaws.com/prod/api/bookings" },
+        { "name": "NOTIFICATION_SERVICE_URL", "value": "https://3io1rqmtw1.execute-api.ap-south-1.amazonaws.com/prod/api/notifications" },
+        { "name": "ALLOWED_ORIGINS", "value": "https://3io1rqmtw1.execute-api.ap-south-1.amazonaws.com/prod" },
+        { "name": "STRIPE_SECRET_KEY", "value": "sk_test_51TDgVrFvYwhhWZpYYy9cw75I9i4KWC8z2qyfy0lzXGqOHSfgDCaKAJmORSy7DedhbsMnbosXC1DCKaWSQLUNrXkL006Vl2jwfk" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
