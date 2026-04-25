@@ -13,18 +13,18 @@ exports.getProfile = async (req, res, next) => {
 
 // PUT /api/users/profile
 exports.updateProfile = async (req, res, next) => {
-  try {
-    const { name, email } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { name, email },
-      { new: true, runValidators: true }
-    );
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-    res.json({ success: true, message: 'Profile updated', user });
-  } catch (error) {
-    next(error);
-  }
+  // try {
+  //   const { name, email } = req.body;
+  //   const user = await User.findByIdAndUpdate(
+  //     req.user.id,
+  //     { name, email },
+  //     { new: true, runValidators: true }
+  //   );
+  //   if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+  //   res.json({ success: true, message: 'Profile updated', user });
+  // } catch (error) {
+  //   next(error);
+  // }
 };
 
 // DELETE /api/users/profile
