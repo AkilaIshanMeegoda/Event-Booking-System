@@ -51,7 +51,7 @@ export default function Home() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 animate-fade-in-up delay-100">
-              Discover &amp; Book{' '}
+              Discover &amp; Test Book{' '}
               <span className="bg-gradient-to-r from-yellow-200 to-pink-200 bg-clip-text text-transparent">
                 Amazing Events
               </span>
